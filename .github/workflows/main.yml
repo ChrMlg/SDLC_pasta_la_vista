@@ -1,0 +1,2 @@
+- name: Issue Importer Action
+  uses: dsanchezcr/issue-importer-action@v1.0.0
