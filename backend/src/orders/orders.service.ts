@@ -6,12 +6,12 @@ import type { NotificationsService } from '../notifications/notifications.servic
 export type OrderType = 'DINE_IN' | 'TAKEAWAY';
 export type OrderInput = { branchId: string; type: OrderType; tableId: string | null; items: { dishId: string; quantity: number; note: string | null }[] };
 export type CreatedOrder = { id: string; orderNumber: number; status: 'PENDING'; createdAt: Date; total: string; type: OrderType; branchId: string; tableId: string | null };
-export type LinkPreview = { orderId: string; orderNumber: number; branchId: string; expiresAt: Date; usedAt: Date | null; clientId: string | null };
+export type LinkPreview = { orderId: string; orderNumber: number; branchId: string; expiresAt: Date; usedAt: Date | null; clientId: string | null; tableNumber?: number | null; itemCount?: number };
 export interface OrdersRepository {
   branchExists(id: string): Promise<boolean>;
   create(input: OrderInput, userId: string, customer: boolean): Promise<CreatedOrder>;
   findLinkableOrder(id: string, branchId: string): Promise<{ id: string; clientId: string | null; type: OrderType } | null>;
-  saveLinkCode(orderId: string, hash: string, expiresAt: Date): Promise<void>;
+  saveLinkCode(orderId: string, hash: string, expiresAt: Date, createdById: string): Promise<void>;
   previewCode(hash: string): Promise<LinkPreview | null>;
   confirmCode(hash: string, customerId: string): Promise<LinkPreview | 'conflict' | null>;
 }
@@ -52,8 +52,8 @@ function validateBody(body: unknown): OrderInput {
 
 export class OrdersService {
   private repo: OrdersRepository;
-  private readonly notifications?: Pick<NotificationsService, 'orderQueued'>;
-  constructor(repo: OrdersRepository, notifications?: Pick<NotificationsService, 'orderQueued'>) { this.repo = repo; this.notifications = notifications; }
+  private readonly notifications?: Pick<NotificationsService, 'orderQueued' | 'orderCreated'>;
+  constructor(repo: OrdersRepository, notifications?: Pick<NotificationsService, 'orderQueued' | 'orderCreated'>) { this.repo = repo; this.notifications = notifications; }
   async create(body: unknown, session: Session, customer: boolean) {
     if (session.role !== (customer ? 'CUSTOMER' : 'WAITER')) fail(403, 'FORBIDDEN', 'No tiene permiso para registrar este pedido');
     const input = validateBody(body);
@@ -61,8 +61,11 @@ export class OrdersService {
     if (!(await this.repo.branchExists(input.branchId))) fail(404, 'NOT_FOUND', 'Sucursal no encontrada');
     try {
       const order = await this.repo.create(input, session.userId, customer);
-      if (order.type === 'DINE_IN' && this.notifications) {
-        try { await this.notifications.orderQueued(order.id); }
+      if (this.notifications) {
+        try {
+          await this.notifications.orderCreated(order.id);
+          if (order.type === 'DINE_IN') await this.notifications.orderQueued(order.id);
+        }
         catch (error) { console.error('Notification delivery failed after order commit', error); }
       }
       return { ...order, createdAt: order.createdAt.toISOString() };
@@ -73,28 +76,29 @@ export class OrdersService {
   }
   async createLinkCode(orderId: string, session: Session) {
     if (session.role !== 'WAITER') fail(403, 'FORBIDDEN', 'Solo un mesero puede generar códigos');
-    requireUuid(orderId, 'orderId');
+    if (!uuid.test(orderId)) fail(400, 'INVALID_FIELD', 'Identificador inválido', 'orderId');
     const order = await this.repo.findLinkableOrder(orderId, session.branchId ?? '');
     if (!order) fail(404, 'NOT_FOUND', 'Pedido no encontrado');
     if (order.type !== 'DINE_IN' || order.clientId) fail(409, 'ORDER_NOT_LINKABLE', 'El pedido no admite vinculación');
     const code = Array.from({ length: 12 }, () => codeAlphabet[randomInt(codeAlphabet.length)]).join('');
     const expiresAt = new Date(Date.now() + 10 * 60_000);
-    try { await this.repo.saveLinkCode(orderId, hashCode(code), expiresAt); }
+    try { await this.repo.saveLinkCode(orderId, hashCode(code), expiresAt, session.userId); }
     catch (error) { if (error && typeof error === 'object' && 'code' in error && error.code === 'P2034') fail(409, 'LINK_CODE_CONFLICT', 'El pedido cambió durante la vinculación'); throw error; }
     return { code, expiresAt: expiresAt.toISOString() };
   }
   async previewCode(code: string, session: Session) {
     if (session.role !== 'CUSTOMER') fail(403, 'FORBIDDEN', 'Solo un cliente puede vincular pedidos');
-    if (!/^[A-HJ-NP-Z2-9]{12}$/.test(code)) fail(404, 'NOT_FOUND', 'Código no encontrado');
+    if (!/^[A-HJ-NP-Z2-9]{12}$/.test(code)) fail(400, 'INVALID_FIELD', 'Código inválido', 'code');
     const preview = await this.repo.previewCode(hashCode(code));
-    if (!preview || preview.usedAt || preview.expiresAt <= new Date() || preview.clientId) fail(404, 'NOT_FOUND', 'Código no encontrado');
-    return { orderNumber: preview.orderNumber, branchId: preview.branchId, expiresAt: preview.expiresAt.toISOString() };
+    if (!preview) fail(404, 'NOT_FOUND', 'Código no encontrado');
+    if (preview.usedAt || preview.expiresAt <= new Date() || preview.clientId) fail(409, 'LINK_CODE_CONFLICT', 'El código expiró o ya fue usado');
+    return { tableNumber: preview.tableNumber ?? null, itemCount: preview.itemCount ?? 0, orderNumber: preview.orderNumber, branchId: preview.branchId, expiresAt: preview.expiresAt.toISOString() };
   }
   async confirmCode(body: unknown, session: Session) {
     if (session.role !== 'CUSTOMER') fail(403, 'FORBIDDEN', 'Solo un cliente puede vincular pedidos');
-    if (!body || typeof body !== 'object' || Array.isArray(body) || Object.keys(body).length !== 1 || typeof (body as { code?: unknown }).code !== 'string') fail(422, 'INVALID_FIELD', 'Código inválido', 'code');
+    if (!body || typeof body !== 'object' || Array.isArray(body) || Object.keys(body).length !== 1 || typeof (body as { code?: unknown }).code !== 'string') fail(400, 'INVALID_FIELD', 'Código inválido', 'code');
     const code = (body as { code: string }).code;
-    if (!/^[A-HJ-NP-Z2-9]{12}$/.test(code)) fail(422, 'INVALID_FIELD', 'Código inválido', 'code');
+    if (!/^[A-HJ-NP-Z2-9]{12}$/.test(code)) fail(400, 'INVALID_FIELD', 'Código inválido', 'code');
     let result: LinkPreview | 'conflict' | null;
     try { result = await this.repo.confirmCode(hashCode(code), session.userId); }
     catch (error) { if (error && typeof error === 'object' && 'code' in error && error.code === 'P2034') fail(409, 'LINK_CODE_CONFLICT', 'El código ya fue usado'); throw error; }

@@ -1,0 +1,8 @@
+# Entorno aislado: docker compose -p sdlc-qa -f compose.yaml -f compose.test.yaml --env-file .env.qa.local up -d db backend
+services:
+  db:
+    ports:
+      - '127.0.0.1:${QA_DB_PORT:-55439}:5432'
+  backend:
+    ports:
+      - '127.0.0.1:${QA_API_PORT:-3309}:3000'

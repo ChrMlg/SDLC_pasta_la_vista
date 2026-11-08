@@ -1,5 +1,7 @@
 import 'reflect-metadata';
-import { Module } from '@nestjs/common';
+import { PrismaClient } from '@prisma/client';
+import { PrismaModule } from './prisma/prisma.module';
+import { Controller, Get, Module } from '@nestjs/common';
 import { NestFactory } from '@nestjs/core';
 import { ApiErrorFilter } from './common/menu-error.filter';
 import { MenuModule } from './menu/menu.module';
@@ -10,12 +12,20 @@ import { AuthModule } from './auth/auth.module';
 import { AuthService } from './auth/auth.service';
 import type { AuthenticatedRequest } from './common/session';
 
-@Module({ imports: [AuthModule, MenuModule, OrdersModule, BillingModule, NotificationsModule] })
+@Controller('health')
+class HealthController {
+  constructor(private readonly db: PrismaClient) {}
+  @Get()
+  async health() { await this.db.$queryRaw`SELECT 1`; return { status: 'ok' }; }
+}
+
+@Module({ controllers: [HealthController], imports: [PrismaModule, AuthModule, MenuModule, OrdersModule, BillingModule, NotificationsModule] })
 class AppModule {}
 
 async function bootstrap() {
   const app = await NestFactory.create(AppModule);
   app.setGlobalPrefix('api');
+  app.enableShutdownHooks();
   app.useGlobalFilters(new ApiErrorFilter());
   const auth = app.get(AuthService);
   app.use((request: AuthenticatedRequest, _response: unknown, next: (error?: unknown) => void) => {

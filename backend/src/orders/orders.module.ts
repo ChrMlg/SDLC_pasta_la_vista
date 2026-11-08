@@ -14,7 +14,6 @@ import { OrderTrackingController } from './order-tracking.controller';
   controllers: [OrdersController, SeatingController, MySeatingController, OrderTrackingController],
   providers: [
     VerifiedSessionGuard,
-    { provide: PrismaClient, useFactory: () => new PrismaClient() },
     { provide: PrismaOrdersRepository, useFactory: (db: PrismaClient) => new PrismaOrdersRepository(db), inject: [PrismaClient] },
     { provide: OrdersService, useFactory: (repo: PrismaOrdersRepository, notifications: NotificationsService) => new OrdersService(repo, notifications), inject: [PrismaOrdersRepository, NotificationsService] },
   ],
