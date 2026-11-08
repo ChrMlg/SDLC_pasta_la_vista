@@ -31,9 +31,15 @@ export class PrismaMenuRepository implements MenuRepository {
   }
   async list(branchId: string, filters: MenuFilters) {
     const where: Prisma.MenuItemWhereInput = { branchId };
-    if (filters.search !== undefined) where.name = { contains: filters.search, mode: 'insensitive' };
+    // PostgreSQL LIKE treats %, _ and backslash specially; search text is literal.
+    if (filters.search !== undefined) where.name = { contains: filters.search.replace(/[\\%_]/g, '\\$&'), mode: 'insensitive' };
     if (filters.category !== undefined) where.category = filters.category;
     if (filters.isAvailable !== undefined) where.isAvailable = filters.isAvailable;
+    // Prisma's PostgreSQL skip is a 32-bit integer. Very distant valid pages
+    // still return the requested metadata and count rather than a server error.
+    if (filters.page > 214748365) {
+      return { items: [], total: await this.db.menuItem.count({ where }) };
+    }
     const [items, total] = await this.db.$transaction([
       this.db.menuItem.findMany({ where, orderBy: [{ name: 'asc' }, { id: 'asc' }], skip: (filters.page - 1) * 10, take: 10 }),
       this.db.menuItem.count({ where }),
@@ -42,16 +48,16 @@ export class PrismaMenuRepository implements MenuRepository {
   }
   async changeAvailability(branchId: string, id: string, isAvailable: boolean, userId: string) {
     return this.db.$transaction(async tx => {
-      const current = await tx.menuItem.findFirst({ where: { id, branchId } });
-      if (!current) return null;
-      if (current.isAvailable === isAvailable) return 'conflict';
       const changed = await tx.menuItem.updateMany({
-        where: { id, branchId, isAvailable: current.isAvailable },
+        where: { id, branchId, isAvailable: !isAvailable },
         data: { isAvailable, updatedById: userId },
       });
-      if (changed.count !== 1) return 'conflict';
+      if (changed.count !== 1) {
+        const current = await tx.menuItem.findFirst({ where: { id, branchId }, select: { id: true } });
+        return current ? 'conflict' : null;
+      }
       await tx.menuAvailabilityChange.create({
-        data: { menuItemId: id, oldValue: current.isAvailable, newValue: isAvailable, changedById: userId },
+        data: { menuItemId: id, oldValue: !isAvailable, newValue: isAvailable, changedById: userId },
       });
       const item = await tx.menuItem.findUniqueOrThrow({ where: { id } });
       return toItem(item);

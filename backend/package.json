@@ -6,7 +6,10 @@
     "build": "tsc -p tsconfig.json",
     "typecheck": "tsc --noEmit -p tsconfig.json",
     "prisma:generate": "prisma generate",
-    "prisma:migrate": "prisma migrate dev"
+    "prisma:migrate": "prisma migrate dev",
+    "test:catalog:db": "node test/catalog-db.test.cjs",
+    "test:catalog:availability:db": "node test/catalog-availability-db.test.cjs",
+    "test:catalog:menu:db": "node test/catalog-menu-db.test.cjs"
   },
   "dependencies": {
     "@nestjs/common": "^10.4.0",
