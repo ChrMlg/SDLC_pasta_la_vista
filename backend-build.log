@@ -1,0 +1,136 @@
+ Image bistro-backend Building 
+#1 [internal] load local bake definitions
+#1 reading from stdin 502B done
+#1 DONE 0.0s
+
+#2 [internal] load build definition from Dockerfile
+#2 transferring dockerfile: 1.16kB 0.0s done
+#2 DONE 0.0s
+
+#3 [internal] load metadata for docker.io/library/node:22-bookworm-slim
+#3 DONE 0.6s
+
+#4 [internal] load .dockerignore
+#4 transferring context: 138B done
+#4 DONE 0.0s
+
+#5 [build  1/10] FROM docker.io/library/node:22-bookworm-slim@sha256:4b150b48b4116e2a22f2c39cc27025fbf4f153e2078fd3b14d159fdb5c7279da
+#5 resolve docker.io/library/node:22-bookworm-slim@sha256:4b150b48b4116e2a22f2c39cc27025fbf4f153e2078fd3b14d159fdb5c7279da 0.0s done
+#5 DONE 0.0s
+
+#6 [build  2/10] WORKDIR /app/backend
+#6 CACHED
+
+#7 [build  3/10] RUN apt-get update && apt-get install -y --no-install-recommends openssl     && rm -rf /var/lib/apt/lists/*
+#7 CACHED
+
+#8 [internal] load build context
+#8 transferring context: 2.57kB 0.0s done
+#8 DONE 0.0s
+
+#9 [build  6/10] COPY backend/prisma prisma
+#9 CACHED
+
+#10 [build  4/10] COPY backend/package.json ./
+#10 CACHED
+
+#11 [build  5/10] RUN npm install --no-audit --no-fund
+#11 CACHED
+
+#12 [build  7/10] COPY backend/tsconfig.json tsconfig.json
+#12 CACHED
+
+#13 [build  8/10] COPY backend/src src
+#13 CACHED
+
+#14 [build  9/10] RUN DATABASE_URL=postgresql://build:build@localhost:5432/build npm run prisma:generate
+#14 CACHED
+
+#15 [build 10/10] RUN npm run build
+#15 0.817 
+#15 0.817 > build
+#15 0.817 > tsc -p tsconfig.json
+#15 0.817 
+#15 2.935 src/billing/billing.service.ts(34,12): error TS18047: 'bill' is possibly 'null'.
+#15 2.935 src/billing/billing.service.ts(34,34): error TS18047: 'bill' is possibly 'null'.
+#15 2.935 src/billing/billing.service.ts(35,33): error TS18047: 'bill' is possibly 'null'.
+#15 2.936 src/billing/billing.service.ts(75,15): error TS18047: 'order' is possibly 'null'.
+#15 2.936 src/billing/billing.service.ts(75,44): error TS18047: 'order' is possibly 'null'.
+#15 2.937 src/billing/billing.service.ts(75,76): error TS18047: 'order' is possibly 'null'.
+#15 2.937 src/billing/billing.service.ts(76,46): error TS18047: 'order' is possibly 'null'.
+#15 2.937 src/billing/billing.service.ts(77,21): error TS2322: Type '{ total: Decimal; id: string; clientId: string | null; type: OrderType; status: OrderStatus; billId: string | null; } | null' is not assignable to type '{ id: string; total: Decimal; status: string; type: string; clientId: string | null; }'.
+#15 2.937   Type 'null' is not assignable to type '{ id: string; total: Decimal; status: string; type: string; clientId: string | null; }'.
+#15 2.938 src/billing/billing.service.ts(92,99): error TS2322: Type 'unknown' is not assignable to type 'string'.
+#15 2.938 src/billing/billing.service.ts(104,98): error TS2322: Type 'unknown' is not assignable to type 'string'.
+#15 2.939 src/billing/billing.service.ts(120,93): error TS2322: Type 'unknown' is not assignable to type 'string'.
+#15 2.939 src/menu/menu.service.ts(56,18): error TS18046: 'input.name' is of type 'unknown'.
+#15 2.939 src/menu/menu.service.ts(72,36): error TS18046: 'input.price' is of type 'unknown'.
+#15 2.939 src/menu/menu.service.ts(86,5): error TS2322: Type '{} | null' is not assignable to type 'string | undefined'.
+#15 2.939   Type 'null' is not assignable to type 'string | undefined'.
+#15 2.939 src/menu/menu.service.ts(145,25): error TS2345: Argument of type 'MenuItem | null' is not assignable to parameter of type 'MenuItem'.
+#15 2.939   Type 'null' is not assignable to type 'MenuItem'.
+#15 2.939 src/menu/menu.service.ts(170,18): error TS18047: 'result' is possibly 'null'.
+#15 2.939 src/menu/menu.service.ts(170,25): error TS2339: Property 'id' does not exist on type 'MenuItem | "conflict"'.
+#15 2.939   Property 'id' does not exist on type '"conflict"'.
+#15 2.939 src/menu/menu.service.ts(170,39): error TS18047: 'result' is possibly 'null'.
+#15 2.939 src/menu/menu.service.ts(170,46): error TS2339: Property 'branchId' does not exist on type 'MenuItem | "conflict"'.
+#15 2.939   Property 'branchId' does not exist on type '"conflict"'.
+#15 2.940 src/menu/menu.service.ts(170,69): error TS18047: 'result' is possibly 'null'.
+#15 2.940 src/menu/menu.service.ts(170,76): error TS2339: Property 'isAvailable' does not exist on type 'MenuItem | "conflict"'.
+#15 2.940   Property 'isAvailable' does not exist on type '"conflict"'.
+#15 2.940 src/menu/menu.service.ts(171,18): error TS18047: 'result' is possibly 'null'.
+#15 2.940 src/menu/menu.service.ts(171,25): error TS2339: Property 'updatedAt' does not exist on type 'MenuItem | "conflict"'.
+#15 2.940   Property 'updatedAt' does not exist on type '"conflict"'.
+#15 2.940 src/menu/menu.service.ts(171,63): error TS18047: 'result' is possibly 'null'.
+#15 2.940 src/menu/menu.service.ts(171,70): error TS2339: Property 'updatedById' does not exist on type 'MenuItem | "conflict"'.
+#15 2.940   Property 'updatedById' does not exist on type '"conflict"'.
+#15 2.940 src/orders/orders.service.ts(39,17): error TS18046: 'data.items' is of type 'unknown'.
+#15 2.940 src/orders/orders.service.ts(39,33): error TS7006: Parameter 'raw' implicitly has an 'any' type.
+#15 2.940 src/orders/orders.service.ts(39,38): error TS7006: Parameter 'index' implicitly has an 'any' type.
+#15 2.940 src/orders/orders.service.ts(48,47): error TS2322: Type 'unknown' is not assignable to type 'OrderType'.
+#15 2.940 src/orders/orders.service.ts(77,9): error TS18047: 'order' is possibly 'null'.
+#15 2.941 src/orders/orders.service.ts(77,37): error TS18047: 'order' is possibly 'null'.
+#15 2.942 src/orders/orders.service.ts(89,27): error TS18047: 'preview' is possibly 'null'.
+#15 2.942 src/orders/orders.service.ts(89,58): error TS18047: 'preview' is possibly 'null'.
+#15 2.943 src/orders/orders.service.ts(89,87): error TS18047: 'preview' is possibly 'null'.
+#15 2.943 src/orders/orders.service.ts(101,23): error TS18047: 'result' is possibly 'null'.
+#15 2.943 src/orders/orders.service.ts(101,30): error TS2339: Property 'orderId' does not exist on type '"conflict" | LinkPreview'.
+#15 2.943   Property 'orderId' does not exist on type '"conflict"'.
+#15 2.944 src/orders/orders.service.ts(101,52): error TS18047: 'result' is possibly 'null'.
+#15 2.944 src/orders/orders.service.ts(101,59): error TS2339: Property 'orderNumber' does not exist on type '"conflict" | LinkPreview'.
+#15 2.944   Property 'orderNumber' does not exist on type '"conflict"'.
+#15 2.945 src/orders/orders.service.ts(101,82): error TS18047: 'result' is possibly 'null'.
+#15 2.945 src/orders/orders.service.ts(101,89): error TS2339: Property 'branchId' does not exist on type '"conflict" | LinkPreview'.
+#15 2.945   Property 'branchId' does not exist on type '"conflict"'.
+#15 ERROR: process "/bin/sh -c npm run build" did not complete successfully: exit code: 2
+------
+ > [build 10/10] RUN npm run build:
+2.943 src/orders/orders.service.ts(89,87): error TS18047: 'preview' is possibly 'null'.
+2.943 src/orders/orders.service.ts(101,23): error TS18047: 'result' is possibly 'null'.
+2.943 src/orders/orders.service.ts(101,30): error TS2339: Property 'orderId' does not exist on type '"conflict" | LinkPreview'.
+2.943   Property 'orderId' does not exist on type '"conflict"'.
+2.944 src/orders/orders.service.ts(101,52): error TS18047: 'result' is possibly 'null'.
+2.944 src/orders/orders.service.ts(101,59): error TS2339: Property 'orderNumber' does not exist on type '"conflict" | LinkPreview'.
+2.944   Property 'orderNumber' does not exist on type '"conflict"'.
+2.945 src/orders/orders.service.ts(101,82): error TS18047: 'result' is possibly 'null'.
+2.945 src/orders/orders.service.ts(101,89): error TS2339: Property 'branchId' does not exist on type '"conflict" | LinkPreview'.
+2.945   Property 'branchId' does not exist on type '"conflict"'.
+------
+Dockerfile:15
+
+--------------------
+
+  13 |     # connect to PostgreSQL. Compose supplies the real URL when the container starts.
+
+  14 |     RUN DATABASE_URL=postgresql://build:build@localhost:5432/build npm run prisma:generate
+
+  15 | >>> RUN npm run build
+
+  16 |     
+
+  17 |     FROM node:22-bookworm-slim
+
+--------------------
+
+failed to solve: process "/bin/sh -c npm run build" did not complete successfully: exit code: 2
+

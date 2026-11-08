@@ -1,0 +1,313 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// Minimal shared identity tables. The auth team owns session issuance and user management.
+enum Role {
+  CUSTOMER
+  WAITER
+  KITCHEN
+  MANAGER
+  GENERAL_MANAGER
+}
+
+enum NotificationSourceModule {
+  ORDERS
+  RESERVATIONS
+  KITCHEN
+}
+
+enum MenuCategory {
+  STARTER
+  MAIN_COURSE
+  DRINK
+  DESSERT
+}
+
+model Branch {
+  id        String     @id @default(uuid()) @db.Uuid
+  code      String     @unique
+  name      String
+  users     User[]
+  menuItems MenuItem[]
+  orders Order[]
+  tables Table[]
+  bills Bill[]
+  receipts Receipt[]
+  receiptCounter ReceiptCounter?
+}
+
+model User {
+  id                  String                   @id @default(uuid()) @db.Uuid
+  email               String?                  @unique @db.VarChar(254)
+  passwordHash        String?                  @db.VarChar(255)
+  role                Role
+  branchId            String?                  @db.Uuid
+  branch              Branch?                  @relation(fields: [branchId], references: [id])
+  createdMenuItems    MenuItem[]               @relation("MenuItemCreatedBy")
+  updatedMenuItems    MenuItem[]               @relation("MenuItemUpdatedBy")
+  availabilityChanges MenuAvailabilityChange[]
+  createdOrders Order[] @relation("OrderCreatedBy")
+  clientOrders Order[] @relation("OrderClient")
+  tableAssignments TableAssignment[]
+  payments Payment[]
+  notifications Notification[]
+  authSessions AuthSession[]
+}
+
+model AuthSession {
+  tokenHash String @id @db.Char(64)
+  userId String @db.Uuid
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  createdAt DateTime @default(now())
+  expiresAt DateTime
+
+  @@index([userId])
+  @@index([expiresAt])
+}
+
+model Notification {
+  id String @id @default(uuid()) @db.Uuid
+  userId String @db.Uuid
+  user User @relation(fields: [userId], references: [id], onDelete: Restrict)
+  title String @db.VarChar(120)
+  message String @db.VarChar(500)
+  sourceModule NotificationSourceModule
+  eventKey String @db.VarChar(150)
+  relatedEntityId String? @db.Uuid
+  readAt DateTime?
+  createdAt DateTime @default(now())
+
+  @@unique([eventKey, userId])
+  @@index([userId, createdAt(sort: Desc)])
+}
+
+model MenuItem {
+  id                  String                   @id @default(uuid()) @db.Uuid
+  branchId            String                   @db.Uuid
+  branch              Branch                   @relation(fields: [branchId], references: [id])
+  name                String                   @db.VarChar(80)
+  normalizedName      String                   @db.VarChar(80)
+  description         String?                  @db.VarChar(300)
+  category            MenuCategory
+  price               Decimal                  @db.Decimal(10, 2)
+  isAvailable         Boolean                  @default(true)
+  createdById         String                   @db.Uuid
+  createdBy           User                     @relation("MenuItemCreatedBy", fields: [createdById], references: [id])
+  updatedById         String?                  @db.Uuid
+  updatedBy           User?                    @relation("MenuItemUpdatedBy", fields: [updatedById], references: [id])
+  createdAt           DateTime                 @default(now())
+  updatedAt           DateTime                 @updatedAt
+  availabilityChanges MenuAvailabilityChange[]
+  orderItems OrderItem[]
+
+  @@unique([branchId, normalizedName])
+  @@index([branchId, name, id])
+}
+
+model MenuAvailabilityChange {
+  id          String   @id @default(uuid()) @db.Uuid
+  menuItemId  String   @db.Uuid
+  menuItem    MenuItem @relation(fields: [menuItemId], references: [id])
+  oldValue    Boolean
+  newValue    Boolean
+  changedById String   @db.Uuid
+  changedBy   User     @relation(fields: [changedById], references: [id])
+  createdAt   DateTime @default(now())
+
+  @@index([menuItemId, createdAt])
+}
+
+// Shared table and kitchen contracts used by customer seating and staff order tracking.
+enum TableStatus {
+  AVAILABLE
+  OCCUPIED
+  RESERVED
+  NEEDS_CLEANING
+}
+
+enum OrderType {
+  DINE_IN
+  TAKEAWAY
+}
+
+enum OrderStatus {
+  PENDING
+  IN_PREPARATION
+  READY
+  OUT_FOR_DELIVERY
+  DELIVERED
+  CANCELLED
+}
+
+enum OrderItemStatus {
+  PENDING
+  IN_PREPARATION
+  READY
+  CANCELLED
+}
+
+model Table {
+  id          String            @id @default(uuid()) @db.Uuid
+  branchId    String            @db.Uuid
+  branch      Branch            @relation(fields: [branchId], references: [id])
+  number      Int
+  status      TableStatus       @default(AVAILABLE)
+  orders      Order[]
+  assignments TableAssignment[]
+  bills Bill[]
+
+  @@unique([branchId, number])
+  @@index([branchId, status])
+}
+
+model TableAssignment {
+  id         String          @id @default(uuid()) @db.Uuid
+  tableId    String          @db.Uuid
+  table      Table @relation(fields: [tableId], references: [id])
+  customerId String          @db.Uuid
+  customer   User            @relation(fields: [customerId], references: [id])
+  validFrom  DateTime
+  validTo    DateTime?
+
+  @@index([customerId, tableId, validFrom, validTo])
+}
+
+model Order {
+  id          String          @id @default(uuid()) @db.Uuid
+  orderNumber Int             @unique
+  branchId    String          @db.Uuid
+  branch      Branch          @relation(fields: [branchId], references: [id])
+  tableId     String?         @db.Uuid
+  table       Table? @relation(fields: [tableId], references: [id], onDelete: Restrict)
+  createdById String          @db.Uuid
+  createdBy   User            @relation("OrderCreatedBy", fields: [createdById], references: [id])
+  clientId    String?         @db.Uuid
+  client      User?           @relation("OrderClient", fields: [clientId], references: [id])
+  type        OrderType
+  status      OrderStatus     @default(PENDING)
+  total       Decimal         @db.Decimal(12, 2)
+  createdAt   DateTime        @default(now())
+  updatedAt   DateTime        @updatedAt
+  deliveredAt DateTime?
+  items       OrderItem[]
+  linkCodes   OrderLinkCode[]
+  kitchenTicket KitchenTicket?
+  billId String? @db.Uuid
+  bill Bill? @relation(fields: [billId], references: [id], onDelete: Restrict)
+
+  @@index([branchId, tableId, status])
+  @@index([clientId, createdAt])
+  @@index([billId])
+}
+
+enum BillStatus {
+  OPEN
+  PAID
+}
+
+enum PaymentStatus {
+  PENDING
+  APPROVED
+  FAILED
+}
+
+model Bill {
+  id String @id @default(uuid()) @db.Uuid
+  branchId String @db.Uuid
+  branch Branch @relation(fields: [branchId], references: [id])
+  tableId String? @db.Uuid
+  table Table? @relation(fields: [tableId], references: [id], onDelete: Restrict)
+  type OrderType
+  status BillStatus @default(OPEN)
+  subtotal Decimal @db.Decimal(12, 2)
+  discount Decimal @default(0) @db.Decimal(12, 2)
+  tax Decimal @db.Decimal(12, 2)
+  total Decimal @db.Decimal(12, 2)
+  orders Order[]
+  payments Payment[]
+  receipt Receipt?
+  createdAt DateTime @default(now())
+  paidAt DateTime?
+
+  @@index([branchId, tableId])
+}
+
+model Payment {
+  id String @id @default(uuid()) @db.Uuid
+  billId String @db.Uuid
+  bill Bill @relation(fields: [billId], references: [id])
+  userId String @db.Uuid
+  user User @relation(fields: [userId], references: [id])
+  idempotencyKey String @db.VarChar(64)
+  status PaymentStatus @default(PENDING)
+  amount Decimal @db.Decimal(12, 2)
+  cardLast4 String @db.Char(4)
+  failureCode String?
+  createdAt DateTime @default(now())
+  completedAt DateTime?
+
+  @@unique([billId, idempotencyKey])
+  @@index([billId, status, createdAt])
+}
+
+model ReceiptCounter {
+  branchId String @id @db.Uuid
+  branch Branch @relation(fields: [branchId], references: [id])
+  nextNumber Int @default(1)
+}
+
+model Receipt {
+  id String @id @default(uuid()) @db.Uuid
+  billId String @unique @db.Uuid
+  bill Bill @relation(fields: [billId], references: [id])
+  branchId String @db.Uuid
+  branch Branch @relation(fields: [branchId], references: [id])
+  number String @db.VarChar(80)
+  sequence Int
+  snapshot Json
+  cardLast4 String @db.Char(4)
+  createdAt DateTime @default(now())
+
+  @@unique([branchId, sequence])
+  @@unique([branchId, number])
+}
+
+model OrderItem {
+  id        String          @id @default(uuid()) @db.Uuid
+  orderId   String          @db.Uuid
+  order     Order           @relation(fields: [orderId], references: [id])
+  dishId    String          @db.Uuid
+  dish      MenuItem        @relation(fields: [dishId], references: [id])
+  quantity  Int
+  unitPrice Decimal         @db.Decimal(10, 2)
+  note      String?         @db.VarChar(500)
+  status    OrderItemStatus @default(PENDING)
+
+  @@index([orderId])
+}
+
+model KitchenTicket {
+  id        String      @id @default(uuid()) @db.Uuid
+  orderId   String      @unique @db.Uuid
+  order     Order       @relation(fields: [orderId], references: [id])
+  status    OrderStatus @default(PENDING)
+  createdAt DateTime    @default(now())
+}
+
+model OrderLinkCode {
+  id        String   @id @default(uuid()) @db.Uuid
+  orderId   String   @db.Uuid
+  order     Order    @relation(fields: [orderId], references: [id])
+  codeHash  String   @unique @db.Char(64)
+  expiresAt DateTime
+  usedAt    DateTime?
+  createdAt DateTime @default(now())
+
+  @@index([orderId, expiresAt])
+}
