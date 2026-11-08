@@ -16,13 +16,20 @@ export class AuthError extends Error {
 function credentials(body: unknown, registration: boolean) {
   if (!body || typeof body !== 'object' || Array.isArray(body)) throw new AuthError(400, 'INVALID_FIELD', 'Solicitud inválida');
   const input = body as Record<string, unknown>;
-  for (const key of Object.keys(input)) if (!['email', 'password'].includes(key)) throw new AuthError(400, 'INVALID_FIELD', `Campo no permitido: ${key}`, key);
+  for (const key of Object.keys(input)) if (!(registration ? ['email', 'password', 'firstName', 'lastName', 'phone'] : ['email', 'password']).includes(key)) throw new AuthError(400, 'INVALID_FIELD', `Campo no permitido: ${key}`, key);
   if (typeof input.email !== 'string') throw new AuthError(400, 'INVALID_FIELD', 'Correo inválido', 'email');
   const email = normalizeEmail(input.email);
   if (email.length > 254 || !emailPattern.test(email)) throw new AuthError(400, 'INVALID_FIELD', 'Correo inválido', 'email');
-  if (typeof input.password !== 'string' || input.password.length > 128 || (registration && input.password.length < 12) || (!registration && !input.password.length))
-    throw new AuthError(400, 'INVALID_FIELD', registration ? 'La contraseña debe tener entre 12 y 128 caracteres' : 'Contraseña inválida', 'password');
-  return { email, password: input.password };
+  if (typeof input.password !== 'string' || input.password.length > 128 || (registration && input.password.length < 8) || (!registration && !input.password.length))
+    throw new AuthError(400, 'INVALID_FIELD', registration ? 'La contraseña debe tener entre 8 y 128 caracteres' : 'Contraseña inválida', 'password');
+  if (registration) {
+    for (const key of ['firstName', 'lastName']) {
+      if (typeof input[key] !== 'string' || (input[key] as string).trim().length < 2 || (input[key] as string).trim().length > 80)
+        throw new AuthError(400, 'INVALID_FIELD', 'Debe tener entre 2 y 80 caracteres', key);
+    }
+    if (typeof input.phone !== 'string' || !/^\d{8}$/.test(input.phone)) throw new AuthError(400, 'INVALID_FIELD', 'El teléfono debe tener ocho dígitos', 'phone');
+  }
+  return { email, password: input.password, firstName: (input.firstName as string | undefined)?.trim(), lastName: (input.lastName as string | undefined)?.trim(), phone: input.phone as string | undefined };
 }
 
 function tokenFromRequest(request: AuthenticatedRequest): string | null {
@@ -38,10 +45,10 @@ export class AuthService {
   constructor(private readonly db: PrismaClient) {}
 
   async register(body: unknown) {
-    const { email, password } = credentials(body, true);
+    const { email, password, firstName, lastName, phone } = credentials(body, true);
     const passwordHash = await hashPassword(password);
     try {
-      const user = await this.db.user.create({ data: { email, passwordHash, role: 'CUSTOMER' } });
+      const user = await this.db.user.create({ data: { email, passwordHash, firstName, lastName, phone, role: 'CUSTOMER' } });
       return { id: user.id, email: user.email, role: user.role, branchId: user.branchId };
     } catch (error) {
       if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === 'P2002') throw new AuthError(409, 'EMAIL_IN_USE', 'Este correo ya está registrado', 'email');
@@ -53,7 +60,7 @@ export class AuthService {
     const { email, password } = credentials(body, false);
     const user = await this.db.user.findUnique({ where: { email } });
     const valid = await verifyPassword(password, user?.passwordHash ?? dummyHash);
-    if (!user || !valid) throw new AuthError(401, 'INVALID_CREDENTIALS', 'Credenciales inválidas');
+    if (!user || !valid || !user.isActive) throw new AuthError(401, 'INVALID_CREDENTIALS', 'Credenciales inválidas');
     const token = randomBytes(32).toString('hex');
     await this.db.authSession.create({ data: { tokenHash: tokenHash(token), userId: user.id, expiresAt: new Date(Date.now() + maxAgeSeconds * 1000) } });
     return { token, user: { userId: user.id, email: user.email, role: user.role, branchId: user.branchId } };
@@ -63,7 +70,7 @@ export class AuthService {
     const token = tokenFromRequest(request);
     if (!token) return;
     const session = await this.db.authSession.findUnique({ where: { tokenHash: tokenHash(token) }, include: { user: true } });
-    if (!session || session.expiresAt <= new Date()) return;
+    if (!session || !session.user.isActive || session.expiresAt <= new Date()) return;
     request.user = { userId: session.user.id, role: session.user.role, branchId: session.user.branchId };
   }
 
@@ -87,8 +94,7 @@ export class AuthService {
           for (const assignment of assignments) {
             const rows = await tx.$queryRaw<{ status: string }[]>`SELECT "status"::text FROM "Table" WHERE "id" = ${assignment.tableId}::uuid FOR UPDATE`;
             if (rows[0]?.status !== 'OCCUPIED') continue;
-            const orders = await tx.order.count({ where: { tableId: assignment.tableId, clientId: request.user!.userId,
-              createdAt: { gte: assignment.validFrom }, status: { not: 'CANCELLED' } } });
+            const orders = await tx.order.count({ where: { tableId: assignment.tableId, OR: [{ billId: null }, { bill: { status: { not: 'PAID' } } }], status: { not: 'CANCELLED' } } });
             if (orders) continue;
             await tx.tableAssignment.update({ where: { id: assignment.id }, data: { validTo: new Date(Math.max(Date.now(), assignment.validFrom.getTime() + 1)) } });
             await tx.table.update({ where: { id: assignment.tableId }, data: { status: 'AVAILABLE' } });

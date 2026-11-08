@@ -7,5 +7,5 @@ import { NotificationsService } from './notifications.service';
 export class NotificationsController {
   constructor(private readonly notifications: NotificationsService) {}
   @Get()
-  inbox(@Req() request: AuthenticatedRequest, @Query('page') page?: string) { return this.notifications.inbox(request.user!.userId, page); }
+  inbox(@Req() request: AuthenticatedRequest, @Query() query: Record<string, unknown>) { return this.notifications.inbox(request.user!.userId, query); }
 }

@@ -48,10 +48,11 @@ export class OrderTrackingController {
         if (!order || order.branchId !== user.branchId) throw new OrderError(404, 'NOT_FOUND', 'Pedido no encontrado');
         const ticket = await tx.kitchenTicket.findUnique({ where: { orderId } });
         if (!ticket) throw conflict('El pedido aún no está en cocina');
-        if (order.status !== expected || ticket.status !== expected) throw conflict('El estado del pedido cambió');
+        if (order.status !== expected || ticket.status !== (status === 'DELIVERED' ? 'READY' : expected)) throw conflict('El estado del pedido cambió');
         await tx.order.update({ where: { id: orderId }, data: { status: status as 'IN_PREPARATION' | 'READY' | 'DELIVERED',
           ...(status === 'DELIVERED' ? { deliveredAt: new Date() } : {}) } });
-        await tx.kitchenTicket.update({ where: { orderId }, data: { status: status as 'IN_PREPARATION' | 'READY' | 'DELIVERED' } });
+        if (status === 'IN_PREPARATION' || status === 'READY')
+          await tx.kitchenTicket.update({ where: { orderId }, data: { status } });
         if (status === 'IN_PREPARATION' || status === 'READY')
           await tx.orderItem.updateMany({ where: { orderId }, data: { status } });
         return { id: orderId, status };
@@ -59,6 +60,10 @@ export class OrderTrackingController {
       if (status === 'IN_PREPARATION' || status === 'READY') {
         try { await this.notifications.kitchenStatusCommitted(orderId, status); }
         catch (error) { console.error('Notification delivery failed after status commit', error); }
+      }
+      if (status === 'DELIVERED') {
+        try { await this.notifications.orderDeliveryCommitted(orderId, status); }
+        catch { console.error('No se pudo registrar el aviso de entrega'); }
       }
       return result;
     } catch (error) {

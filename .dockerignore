@@ -9,3 +9,5 @@ node_modules
 .codex
 *.log
 *Zone.Identifier
+
+**/.env.*

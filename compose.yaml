@@ -19,13 +19,14 @@ services:
       dockerfile: backend/Dockerfile
     environment:
       DATABASE_URL: postgresql://${POSTGRES_USER:-bistro}:${POSTGRES_PASSWORD:-bistro}@db:5432/${POSTGRES_DB:-bistro}?schema=public
+      DIRECT_URL: postgresql://${POSTGRES_USER:-bistro}:${POSTGRES_PASSWORD:-bistro}@db:5432/${POSTGRES_DB:-bistro}?schema=public
       PORT: 3000
       COOKIE_SECURE: ${COOKIE_SECURE:-false}
     depends_on:
       db:
         condition: service_healthy
     healthcheck:
-      test: ["CMD", "node", "-e", "fetch('http://127.0.0.1:3000/api/notifications').then(() => process.exit(0)).catch(() => process.exit(1))"]
+      test: ["CMD", "node", "-e", "fetch('http://127.0.0.1:3000/api/health').then(r => process.exit(r.ok ? 0 : 1)).catch(() => process.exit(1))"]
       interval: 5s
       timeout: 3s
       retries: 10

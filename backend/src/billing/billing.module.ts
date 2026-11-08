@@ -9,7 +9,7 @@ import { NotificationsService } from '../notifications/notifications.service';
 @Module({
   imports: [NotificationsModule],
   controllers: [BillingController],
-  providers: [VerifiedSessionGuard, { provide: PrismaClient, useFactory: () => new PrismaClient() },
+  providers: [VerifiedSessionGuard,
     { provide: BillingService, useFactory: (db: PrismaClient, notifications: NotificationsService) => new BillingService(db, undefined, notifications), inject: [PrismaClient, NotificationsService] }],
 })
 export class BillingModule {}

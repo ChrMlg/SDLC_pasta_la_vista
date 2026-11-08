@@ -1,0 +1,1639 @@
+{
+  "info": {
+    "name": "SDLC Backend — Integration Tests",
+    "description": "Pruebas funcionales de autenticación, menú, pedidos, pagos y notificaciones. Importar el entorno local y ejecutar las carpetas en orden. Cada rol utiliza su propia cookie de sesión.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "item": [
+    {
+      "name": "00 Auth y health",
+      "item": [
+        {
+          "name": "Salud y conexión PostgreSQL",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/health"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('HTTP 200', () => pm.response.to.have.status(200));",
+                  "pm.test('Base disponible', () => pm.expect(pm.response.json().status).to.eql('ok'));"
+                ]
+              }
+            }
+          ],
+          "protocolProfileBehavior": {
+            "disableCookies": true
+          }
+        },
+        {
+          "name": "Sin sesión: 401",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/notifications"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('HTTP 401', () => pm.response.to.have.status(401));",
+                  "pm.test('Error uniforme', () => { const e = pm.response.json(); pm.expect(e).to.have.all.keys('code', 'message', 'field'); });"
+                ]
+              }
+            }
+          ],
+          "protocolProfileBehavior": {
+            "disableCookies": true
+          }
+        },
+        {
+          "name": "Login customer",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/auth/login",
+            "body": {
+              "mode": "raw",
+              "raw": "{\"email\": \"{{customerEmail}}\", \"password\": \"{{customerPassword}}\"}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('HTTP 200', () => pm.response.to.have.status(200));",
+                  "if (pm.response.code === 200) { const cookie = pm.response.headers.get('Set-Cookie'); pm.expect(cookie).to.include('HttpOnly'); pm.environment.set('customerCookie', cookie.split(';')[0]); }"
+                ]
+              }
+            }
+          ],
+          "protocolProfileBehavior": {
+            "disableCookies": true
+          }
+        },
+        {
+          "name": "Login manager",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/auth/login",
+            "body": {
+              "mode": "raw",
+              "raw": "{\"email\": \"{{managerEmail}}\", \"password\": \"{{managerPassword}}\"}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('HTTP 200', () => pm.response.to.have.status(200));",
+                  "if (pm.response.code === 200) { const cookie = pm.response.headers.get('Set-Cookie'); pm.expect(cookie).to.include('HttpOnly'); pm.environment.set('managerCookie', cookie.split(';')[0]); }"
+                ]
+              }
+            }
+          ],
+          "protocolProfileBehavior": {
+            "disableCookies": true
+          }
+        },
+        {
+          "name": "Login waiter",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/auth/login",
+            "body": {
+              "mode": "raw",
+              "raw": "{\"email\": \"{{waiterEmail}}\", \"password\": \"{{waiterPassword}}\"}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('HTTP 200', () => pm.response.to.have.status(200));",
+                  "if (pm.response.code === 200) { const cookie = pm.response.headers.get('Set-Cookie'); pm.expect(cookie).to.include('HttpOnly'); pm.environment.set('waiterCookie', cookie.split(';')[0]); }"
+                ]
+              }
+            }
+          ],
+          "protocolProfileBehavior": {
+            "disableCookies": true
+          }
+        },
+        {
+          "name": "Login kitchen",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/auth/login",
+            "body": {
+              "mode": "raw",
+              "raw": "{\"email\": \"{{kitchenEmail}}\", \"password\": \"{{kitchenPassword}}\"}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('HTTP 200', () => pm.response.to.have.status(200));",
+                  "if (pm.response.code === 200) { const cookie = pm.response.headers.get('Set-Cookie'); pm.expect(cookie).to.include('HttpOnly'); pm.environment.set('kitchenCookie', cookie.split(';')[0]); }"
+                ]
+              }
+            }
+          ],
+          "protocolProfileBehavior": {
+            "disableCookies": true
+          }
+        },
+        {
+          "name": "Login otherCustomer",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/auth/login",
+            "body": {
+              "mode": "raw",
+              "raw": "{\"email\": \"{{otherCustomerEmail}}\", \"password\": \"{{otherCustomerPassword}}\"}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('HTTP 200', () => pm.response.to.have.status(200));",
+                  "if (pm.response.code === 200) { const cookie = pm.response.headers.get('Set-Cookie'); pm.expect(cookie).to.include('HttpOnly'); pm.environment.set('otherCustomerCookie', cookie.split(';')[0]); }"
+                ]
+              }
+            }
+          ],
+          "protocolProfileBehavior": {
+            "disableCookies": true
+          }
+        },
+        {
+          "name": "Registro no permite escoger rol",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/auth/register/customer",
+            "body": {
+              "mode": "raw",
+              "raw": "{\"email\": \"qa@example.invalid\", \"password\": \"{{customerPassword}}\", \"role\": \"GENERAL_MANAGER\"}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('HTTP 400', () => pm.response.to.have.status(400));",
+                  "pm.test('Error uniforme', () => { const e = pm.response.json(); pm.expect(e).to.have.all.keys('code', 'message', 'field'); });"
+                ]
+              }
+            }
+          ],
+          "protocolProfileBehavior": {
+            "disableCookies": true
+          }
+        }
+      ]
+    },
+    {
+      "name": "01 Menú H1-H3",
+      "item": [
+        {
+          "name": "H1 Crear platillo",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Cookie",
+                "value": "{{managerCookie}}"
+              }
+            ],
+            "url": "{{baseUrl}}/branches/{{branchId}}/menu-items",
+            "body": {
+              "mode": "raw",
+              "raw": "{\"name\": \"QA {{$guid}}\", \"category\": \"MAIN_COURSE\", \"price\": \"10.00\"}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('HTTP 201', () => pm.response.to.have.status(201));",
+                  "if (pm.response.code === 201) { const data = pm.response.json(); pm.environment.set('menuItemId', data.id); }"
+                ]
+              }
+            }
+          ],
+          "protocolProfileBehavior": {
+            "disableCookies": true
+          }
+        },
+        {
+          "name": "H1 Cliente no crea platillos",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Cookie",
+                "value": "{{customerCookie}}"
+              }
+            ],
+            "url": "{{baseUrl}}/branches/{{branchId}}/menu-items",
+            "body": {
+              "mode": "raw",
+              "raw": "{\"name\": \"QA {{$guid}}\", \"category\": \"MAIN_COURSE\", \"price\": \"10.00\"}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('HTTP 403', () => pm.response.to.have.status(403));",
+                  "pm.test('Error uniforme', () => { const e = pm.response.json(); pm.expect(e).to.have.all.keys('code', 'message', 'field'); });"
+                ]
+              }
+            }
+          ],
+          "protocolProfileBehavior": {
+            "disableCookies": true
+          }
+        },
+        {
+          "name": "H1 Precio inválido",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Cookie",
+                "value": "{{managerCookie}}"
+              }
+            ],
+            "url": "{{baseUrl}}/branches/{{branchId}}/menu-items/{{menuItemId}}",
+            "body": {
+              "mode": "raw",
+              "raw": "{\"price\": \"1.234\"}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('HTTP 400', () => pm.response.to.have.status(400));",
+                  "pm.test('Error uniforme', () => { const e = pm.response.json(); pm.expect(e).to.have.all.keys('code', 'message', 'field'); });"
+                ]
+              }
+            }
+          ],
+          "protocolProfileBehavior": {
+            "disableCookies": true
+          }
+        },
+        {
+          "name": "H1 Editar precio",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Cookie",
+                "value": "{{managerCookie}}"
+              }
+            ],
+            "url": "{{baseUrl}}/branches/{{branchId}}/menu-items/{{menuItemId}}",
+            "body": {
+              "mode": "raw",
+              "raw": "{\"price\": \"12.50\"}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('HTTP 200', () => pm.response.to.have.status(200));"
+                ]
+              }
+            }
+          ],
+          "protocolProfileBehavior": {
+            "disableCookies": true
+          }
+        },
+        {
+          "name": "H2 Deshabilitar",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Cookie",
+                "value": "{{managerCookie}}"
+              }
+            ],
+            "url": "{{baseUrl}}/branches/{{branchId}}/menu-items/{{menuItemId}}/availability",
+            "body": {
+              "mode": "raw",
+              "raw": "{\"isAvailable\": false}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('HTTP 200', () => pm.response.to.have.status(200));"
+                ]
+              }
+            }
+          ],
+          "protocolProfileBehavior": {
+            "disableCookies": true
+          }
+        },
+        {
+          "name": "H2 Cambio repetido",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Cookie",
+                "value": "{{managerCookie}}"
+              }
+            ],
+            "url": "{{baseUrl}}/branches/{{branchId}}/menu-items/{{menuItemId}}/availability",
+            "body": {
+              "mode": "raw",
+              "raw": "{\"isAvailable\": false}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('HTTP 409', () => pm.response.to.have.status(409));",
+                  "pm.test('Error uniforme', () => { const e = pm.response.json(); pm.expect(e).to.have.all.keys('code', 'message', 'field'); });"
+                ]
+              }
+            }
+          ],
+          "protocolProfileBehavior": {
+            "disableCookies": true
+          }
+        },
+        {
+          "name": "H2 Habilitar",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Cookie",
+                "value": "{{managerCookie}}"
+              }
+            ],
+            "url": "{{baseUrl}}/branches/{{branchId}}/menu-items/{{menuItemId}}/availability",
+            "body": {
+              "mode": "raw",
+              "raw": "{\"isAvailable\": true}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('HTTP 200', () => pm.response.to.have.status(200));"
+                ]
+              }
+            }
+          ],
+          "protocolProfileBehavior": {
+            "disableCookies": true
+          }
+        },
+        {
+          "name": "H3 Menú paginado",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Cookie",
+                "value": "{{customerCookie}}"
+              }
+            ],
+            "url": "{{baseUrl}}/branches/{{branchId}}/menu?page=1"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('HTTP 200', () => pm.response.to.have.status(200));",
+                  "pm.test('Página de diez', () => pm.expect(pm.response.json().pageSize).to.eql(10));"
+                ]
+              }
+            }
+          ],
+          "protocolProfileBehavior": {
+            "disableCookies": true
+          }
+        },
+        {
+          "name": "H3 Página inválida",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Cookie",
+                "value": "{{customerCookie}}"
+              }
+            ],
+            "url": "{{baseUrl}}/branches/{{branchId}}/menu?page=0"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('HTTP 400', () => pm.response.to.have.status(400));",
+                  "pm.test('Error uniforme', () => { const e = pm.response.json(); pm.expect(e).to.have.all.keys('code', 'message', 'field'); });"
+                ]
+              }
+            }
+          ],
+          "protocolProfileBehavior": {
+            "disableCookies": true
+          }
+        }
+      ]
+    },
+    {
+      "name": "02 Pedidos H4-H5",
+      "item": [
+        {
+          "name": "H5 Crear TAKEAWAY propio",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Cookie",
+                "value": "{{customerCookie}}"
+              }
+            ],
+            "url": "{{baseUrl}}/orders/customer",
+            "body": {
+              "mode": "raw",
+              "raw": "{\"branchId\": \"{{branchId}}\", \"type\": \"TAKEAWAY\", \"tableId\": null, \"items\": [{\"dishId\": \"{{menuItemId}}\", \"quantity\": 2}]}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('HTTP 201', () => pm.response.to.have.status(201));",
+                  "if (pm.response.code === 201) { const data = pm.response.json(); pm.environment.set('orderId', data.id); }"
+                ]
+              }
+            }
+          ],
+          "protocolProfileBehavior": {
+            "disableCookies": true
+          }
+        },
+        {
+          "name": "H4 Cliente no opera ruta de mesero",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Cookie",
+                "value": "{{customerCookie}}"
+              }
+            ],
+            "url": "{{baseUrl}}/orders",
+            "body": {
+              "mode": "raw",
+              "raw": "{\"branchId\": \"{{branchId}}\", \"type\": \"TAKEAWAY\", \"tableId\": null, \"items\": [{\"dishId\": \"{{menuItemId}}\", \"quantity\": 2}]}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('HTTP 403', () => pm.response.to.have.status(403));",
+                  "pm.test('Error uniforme', () => { const e = pm.response.json(); pm.expect(e).to.have.all.keys('code', 'message', 'field'); });"
+                ]
+              }
+            }
+          ],
+          "protocolProfileBehavior": {
+            "disableCookies": true
+          }
+        },
+        {
+          "name": "H5 Pedido vacío",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Cookie",
+                "value": "{{customerCookie}}"
+              }
+            ],
+            "url": "{{baseUrl}}/orders/customer",
+            "body": {
+              "mode": "raw",
+              "raw": "{\"branchId\": \"{{branchId}}\", \"type\": \"TAKEAWAY\", \"tableId\": null, \"items\": []}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('HTTP 422', () => pm.response.to.have.status(422));",
+                  "pm.test('Error uniforme', () => { const e = pm.response.json(); pm.expect(e).to.have.all.keys('code', 'message', 'field'); });"
+                ]
+              }
+            }
+          ],
+          "protocolProfileBehavior": {
+            "disableCookies": true
+          }
+        },
+        {
+          "name": "Vinculación: formato inválido",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Cookie",
+                "value": "{{customerCookie}}"
+              }
+            ],
+            "url": "{{baseUrl}}/orders/link-code/incorrecto"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('HTTP 400', () => pm.response.to.have.status(400));",
+                  "pm.test('Error uniforme', () => { const e = pm.response.json(); pm.expect(e).to.have.all.keys('code', 'message', 'field'); });"
+                ]
+              }
+            }
+          ],
+          "protocolProfileBehavior": {
+            "disableCookies": true
+          }
+        }
+      ]
+    },
+    {
+      "name": "06 Cuentas y pagos H16-H18",
+      "item": [
+        {
+          "name": "H16 Gerente no cierra cuenta",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Cookie",
+                "value": "{{managerCookie}}"
+              }
+            ],
+            "url": "{{baseUrl}}/branches/{{branchId}}/bills",
+            "body": {
+              "mode": "raw",
+              "raw": "{\"orderId\": \"{{orderId}}\"}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('HTTP 403', () => pm.response.to.have.status(403));",
+                  "pm.test('Error uniforme', () => { const e = pm.response.json(); pm.expect(e).to.have.all.keys('code', 'message', 'field'); });"
+                ]
+              }
+            }
+          ],
+          "protocolProfileBehavior": {
+            "disableCookies": true
+          }
+        },
+        {
+          "name": "H16 Crear cuenta TAKEAWAY",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Cookie",
+                "value": "{{customerCookie}}"
+              }
+            ],
+            "url": "{{baseUrl}}/branches/{{branchId}}/bills",
+            "body": {
+              "mode": "raw",
+              "raw": "{\"orderId\": \"{{orderId}}\"}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('HTTP 201', () => pm.response.to.have.status(201));",
+                  "if (pm.response.code === 201) { const data = pm.response.json(); pm.environment.set('billId', data.id); }"
+                ]
+              }
+            }
+          ],
+          "protocolProfileBehavior": {
+            "disableCookies": true
+          }
+        },
+        {
+          "name": "H16 Otro cliente no ve cuenta",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Cookie",
+                "value": "{{otherCustomerCookie}}"
+              }
+            ],
+            "url": "{{baseUrl}}/bills/{{billId}}"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('HTTP 404', () => pm.response.to.have.status(404));",
+                  "pm.test('Error uniforme', () => { const e = pm.response.json(); pm.expect(e).to.have.all.keys('code', 'message', 'field'); });"
+                ]
+              }
+            }
+          ],
+          "protocolProfileBehavior": {
+            "disableCookies": true
+          }
+        },
+        {
+          "name": "H17 Clave obligatoria",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Cookie",
+                "value": "{{customerCookie}}"
+              }
+            ],
+            "url": "{{baseUrl}}/bills/{{billId}}/payments",
+            "body": {
+              "mode": "raw",
+              "raw": "{\"cardHolder\": \"Cliente QA\", \"cardNumber\": \"4242424242424242\", \"expMonth\": 12, \"expYear\": 2099, \"cvv\": \"123\"}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('HTTP 400', () => pm.response.to.have.status(400));",
+                  "pm.test('Error uniforme', () => { const e = pm.response.json(); pm.expect(e).to.have.all.keys('code', 'message', 'field'); });"
+                ]
+              }
+            }
+          ],
+          "protocolProfileBehavior": {
+            "disableCookies": true
+          }
+        },
+        {
+          "name": "H17 Luhn inválido",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Cookie",
+                "value": "{{customerCookie}}"
+              },
+              {
+                "key": "Idempotency-Key",
+                "value": "{{$guid}}"
+              }
+            ],
+            "url": "{{baseUrl}}/bills/{{billId}}/payments",
+            "body": {
+              "mode": "raw",
+              "raw": "{\"cardHolder\": \"Cliente QA\", \"cardNumber\": \"1111111111114242\", \"expMonth\": 12, \"expYear\": 2099, \"cvv\": \"123\"}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('HTTP 422', () => pm.response.to.have.status(422));",
+                  "pm.test('Error uniforme', () => { const e = pm.response.json(); pm.expect(e).to.have.all.keys('code', 'message', 'field'); });"
+                ]
+              }
+            }
+          ],
+          "protocolProfileBehavior": {
+            "disableCookies": true
+          }
+        },
+        {
+          "name": "H17 Gerente no cobra",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Cookie",
+                "value": "{{managerCookie}}"
+              },
+              {
+                "key": "Idempotency-Key",
+                "value": "{{$guid}}"
+              }
+            ],
+            "url": "{{baseUrl}}/bills/{{billId}}/payments",
+            "body": {
+              "mode": "raw",
+              "raw": "{\"cardHolder\": \"Cliente QA\", \"cardNumber\": \"4242424242424242\", \"expMonth\": 12, \"expYear\": 2099, \"cvv\": \"123\"}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('HTTP 403', () => pm.response.to.have.status(403));",
+                  "pm.test('Error uniforme', () => { const e = pm.response.json(); pm.expect(e).to.have.all.keys('code', 'message', 'field'); });"
+                ]
+              }
+            }
+          ],
+          "protocolProfileBehavior": {
+            "disableCookies": true
+          }
+        },
+        {
+          "name": "H17 Rechazo simulado",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Cookie",
+                "value": "{{customerCookie}}"
+              },
+              {
+                "key": "Idempotency-Key",
+                "value": "{{failedPaymentKey}}"
+              }
+            ],
+            "url": "{{baseUrl}}/bills/{{billId}}/payments",
+            "body": {
+              "mode": "raw",
+              "raw": "{\"cardHolder\": \"Cliente QA\", \"cardNumber\": \"4000000000000002\", \"expMonth\": 12, \"expYear\": 2099, \"cvv\": \"123\"}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.environment.set('failedPaymentKey', pm.variables.replaceIn('{{$guid}}'));"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('HTTP 200', () => pm.response.to.have.status(200));",
+                  "pm.test('Sin comprobante ni pago', () => {const r=pm.response.json(); pm.expect(r.status).to.eql('FAILED'); pm.expect(r.billStatus).to.eql('OPEN'); pm.expect(r.receiptId).to.eql(null);});"
+                ]
+              }
+            }
+          ],
+          "protocolProfileBehavior": {
+            "disableCookies": true
+          }
+        },
+        {
+          "name": "H17 Pago aprobado",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Cookie",
+                "value": "{{customerCookie}}"
+              },
+              {
+                "key": "Idempotency-Key",
+                "value": "{{paymentKey}}"
+              }
+            ],
+            "url": "{{baseUrl}}/bills/{{billId}}/payments",
+            "body": {
+              "mode": "raw",
+              "raw": "{\"cardHolder\": \"Cliente QA\", \"cardNumber\": \"4242424242424242\", \"expMonth\": 12, \"expYear\": 2099, \"cvv\": \"123\"}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.environment.set('paymentKey', pm.variables.replaceIn('{{$guid}}'));"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('HTTP 200', () => pm.response.to.have.status(200));",
+                  "if (pm.response.code === 200) { const data = pm.response.json(); pm.environment.set('receiptId', data.receiptId); }",
+                  "pm.test('Pago confirmado', () => {const r=pm.response.json(); pm.expect(r.status).to.eql('PAID'); pm.expect(r.billStatus).to.eql('PAID');});"
+                ]
+              }
+            }
+          ],
+          "protocolProfileBehavior": {
+            "disableCookies": true
+          }
+        },
+        {
+          "name": "H17 Repetir misma clave",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Cookie",
+                "value": "{{customerCookie}}"
+              },
+              {
+                "key": "Idempotency-Key",
+                "value": "{{paymentKey}}"
+              }
+            ],
+            "url": "{{baseUrl}}/bills/{{billId}}/payments",
+            "body": {
+              "mode": "raw",
+              "raw": "{\"cardHolder\": \"Cliente QA\", \"cardNumber\": \"4242424242424242\", \"expMonth\": 12, \"expYear\": 2099, \"cvv\": \"123\"}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('HTTP 200', () => pm.response.to.have.status(200));",
+                  "pm.test('Mismo comprobante', () => pm.expect(pm.response.json().receiptId).to.eql(pm.environment.get('receiptId')));"
+                ]
+              }
+            }
+          ],
+          "protocolProfileBehavior": {
+            "disableCookies": true
+          }
+        },
+        {
+          "name": "H17 Cuenta pagada otra clave",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Cookie",
+                "value": "{{customerCookie}}"
+              },
+              {
+                "key": "Idempotency-Key",
+                "value": "{{$guid}}"
+              }
+            ],
+            "url": "{{baseUrl}}/bills/{{billId}}/payments",
+            "body": {
+              "mode": "raw",
+              "raw": "{\"cardHolder\": \"Cliente QA\", \"cardNumber\": \"4242424242424242\", \"expMonth\": 12, \"expYear\": 2099, \"cvv\": \"123\"}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('HTTP 409', () => pm.response.to.have.status(409));",
+                  "pm.test('Error uniforme', () => { const e = pm.response.json(); pm.expect(e).to.have.all.keys('code', 'message', 'field'); });"
+                ]
+              }
+            }
+          ],
+          "protocolProfileBehavior": {
+            "disableCookies": true
+          }
+        },
+        {
+          "name": "H18 Listado paginado",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Cookie",
+                "value": "{{customerCookie}}"
+              }
+            ],
+            "url": "{{baseUrl}}/me/receipts?page=1"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('HTTP 200', () => pm.response.to.have.status(200));",
+                  "pm.test('Paginación', () => {const r=pm.response.json(); pm.expect(r.pageSize).to.eql(10); pm.expect(r.data.length).to.be.at.most(10);});"
+                ]
+              }
+            }
+          ],
+          "protocolProfileBehavior": {
+            "disableCookies": true
+          }
+        },
+        {
+          "name": "H18 Detalle propio",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Cookie",
+                "value": "{{customerCookie}}"
+              }
+            ],
+            "url": "{{baseUrl}}/me/receipts/{{receiptId}}"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('HTTP 200', () => pm.response.to.have.status(200));"
+                ]
+              }
+            }
+          ],
+          "protocolProfileBehavior": {
+            "disableCookies": true
+          }
+        },
+        {
+          "name": "H18 Detalle ajeno",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Cookie",
+                "value": "{{otherCustomerCookie}}"
+              }
+            ],
+            "url": "{{baseUrl}}/me/receipts/{{receiptId}}"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('HTTP 404', () => pm.response.to.have.status(404));",
+                  "pm.test('Error uniforme', () => { const e = pm.response.json(); pm.expect(e).to.have.all.keys('code', 'message', 'field'); });"
+                ]
+              }
+            }
+          ],
+          "protocolProfileBehavior": {
+            "disableCookies": true
+          }
+        },
+        {
+          "name": "H18 PDF propio",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Cookie",
+                "value": "{{customerCookie}}"
+              }
+            ],
+            "url": "{{baseUrl}}/me/receipts/{{receiptId}}/pdf"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('HTTP 200', () => pm.response.to.have.status(200));",
+                  "pm.test('PDF', () => pm.expect(pm.response.headers.get('Content-Type')).to.include('application/pdf'));"
+                ]
+              }
+            }
+          ],
+          "protocolProfileBehavior": {
+            "disableCookies": true
+          }
+        }
+      ]
+    },
+    {
+      "name": "09 Notificaciones H26-H30",
+      "item": [
+        {
+          "name": "H27 Bandeja propia",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Cookie",
+                "value": "{{customerCookie}}"
+              }
+            ],
+            "url": "{{baseUrl}}/notifications"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('HTTP 200', () => pm.response.to.have.status(200));"
+                ]
+              }
+            }
+          ],
+          "protocolProfileBehavior": {
+            "disableCookies": true
+          }
+        },
+        {
+          "name": "H27 Filtro de módulo",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Cookie",
+                "value": "{{customerCookie}}"
+              }
+            ],
+            "url": "{{baseUrl}}/notifications?sourceModule=ORDERS"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('HTTP 200', () => pm.response.to.have.status(200));",
+                  "pm.test('Solo módulo solicitado', () => pm.response.json().data.forEach(n => pm.expect(n.sourceModule).to.eql('ORDERS')));"
+                ]
+              }
+            }
+          ],
+          "protocolProfileBehavior": {
+            "disableCookies": true
+          }
+        },
+        {
+          "name": "H27 Módulo inválido",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Cookie",
+                "value": "{{customerCookie}}"
+              }
+            ],
+            "url": "{{baseUrl}}/notifications?sourceModule=INVALID"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('HTTP 422', () => pm.response.to.have.status(422));",
+                  "pm.test('Error uniforme', () => { const e = pm.response.json(); pm.expect(e).to.have.all.keys('code', 'message', 'field'); });"
+                ]
+              }
+            }
+          ],
+          "protocolProfileBehavior": {
+            "disableCookies": true
+          }
+        },
+        {
+          "name": "H27 Identidad arbitraria rechazada",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Cookie",
+                "value": "{{customerCookie}}"
+              }
+            ],
+            "url": "{{baseUrl}}/notifications?userId=otro"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('HTTP 422', () => pm.response.to.have.status(422));",
+                  "pm.test('Error uniforme', () => { const e = pm.response.json(); pm.expect(e).to.have.all.keys('code', 'message', 'field'); });"
+                ]
+              }
+            }
+          ],
+          "protocolProfileBehavior": {
+            "disableCookies": true
+          }
+        },
+        {
+          "name": "H29 Seguimiento mesero",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Cookie",
+                "value": "{{waiterCookie}}"
+              }
+            ],
+            "url": "{{baseUrl}}/branches/{{branchId}}/orders?status=PENDING,READY"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('HTTP 200', () => pm.response.to.have.status(200));"
+                ]
+              }
+            }
+          ],
+          "protocolProfileBehavior": {
+            "disableCookies": true
+          }
+        },
+        {
+          "name": "H29 Cliente sin permiso",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Cookie",
+                "value": "{{customerCookie}}"
+              }
+            ],
+            "url": "{{baseUrl}}/branches/{{branchId}}/orders"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('HTTP 403', () => pm.response.to.have.status(403));",
+                  "pm.test('Error uniforme', () => { const e = pm.response.json(); pm.expect(e).to.have.all.keys('code', 'message', 'field'); });"
+                ]
+              }
+            }
+          ],
+          "protocolProfileBehavior": {
+            "disableCookies": true
+          }
+        },
+        {
+          "name": "H30 Cola de cocina",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Cookie",
+                "value": "{{kitchenCookie}}"
+              }
+            ],
+            "url": "{{baseUrl}}/branches/{{branchId}}/kitchen/orders"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('HTTP 200', () => pm.response.to.have.status(200));"
+                ]
+              }
+            }
+          ],
+          "protocolProfileBehavior": {
+            "disableCookies": true
+          }
+        },
+        {
+          "name": "H30 Estado inválido",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Cookie",
+                "value": "{{kitchenCookie}}"
+              }
+            ],
+            "url": "{{baseUrl}}/branches/{{branchId}}/kitchen/orders?status=DELIVERED"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('HTTP 422', () => pm.response.to.have.status(422));",
+                  "pm.test('Error uniforme', () => { const e = pm.response.json(); pm.expect(e).to.have.all.keys('code', 'message', 'field'); });"
+                ]
+              }
+            }
+          ],
+          "protocolProfileBehavior": {
+            "disableCookies": true
+          }
+        }
+      ]
+    }
+  ]
+}

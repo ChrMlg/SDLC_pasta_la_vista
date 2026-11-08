@@ -90,8 +90,7 @@ export class SeatingController {
         const assignment = await tx.tableAssignment.findFirst({ where: { tableId, customerId: user.userId,
           validFrom: { lte: new Date() }, OR: [{ validTo: null }, { validTo: { gt: new Date() } }] }, orderBy: { validFrom: 'desc' } });
         if (!assignment) throw new OrderError(404, 'NOT_FOUND', 'Asignación no encontrada');
-        const placedOrders = await tx.order.count({ where: { tableId, clientId: user.userId,
-          createdAt: { gte: assignment.validFrom }, status: { not: 'CANCELLED' } } });
+        const placedOrders = await tx.order.count({ where: { tableId, OR: [{ billId: null }, { bill: { status: { not: 'PAID' } } }], status: { not: 'CANCELLED' } } });
         if (placedOrders) throw new OrderError(409, 'TABLE_HAS_ORDERS', 'La mesa tiene pedidos; solicite el cierre de cuenta');
         if (table.status !== 'OCCUPIED') throw new OrderError(409, 'TABLE_UNAVAILABLE', 'La mesa cambió de estado');
         await tx.tableAssignment.update({ where: { id: assignment.id }, data: { validTo: new Date(Math.max(Date.now(), assignment.validFrom.getTime() + 1)) } });

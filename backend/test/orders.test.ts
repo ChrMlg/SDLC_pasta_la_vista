@@ -67,13 +67,13 @@ test('link code is hashed, can be previewed and consumed once', async () => {
   assert.equal((await service.previewCode(code, customer)).orderNumber, 1);
   assert.equal((await service.confirmCode({ code }, customer)).orderNumber, 1);
   await assert.rejects(service.confirmCode({ code }, customer), rejects(409, 'LINK_CODE_CONFLICT'));
-  await assert.rejects(service.previewCode(code, customer), rejects(404, 'NOT_FOUND'));
+  await assert.rejects(service.previewCode(code, customer), rejects(409, 'LINK_CODE_CONFLICT'));
 });
 
 test('queue notice follows committed DINE_IN order and a delivery error does not undo it', async () => {
   const repo = new FakeRepository();
   const notified: string[] = [];
-  const service = new OrdersService(repo, { orderQueued: async id => {
+  const service = new OrdersService(repo, { orderCreated: async () => {}, orderQueued: async id => {
     assert.equal(repo.saved.length, 1);
     notified.push(id);
   } });
@@ -83,7 +83,7 @@ test('queue notice follows committed DINE_IN order and a delivery error does not
   const originalError = console.error;
   console.error = () => {};
   try {
-    const failing = new OrdersService(new FakeRepository(), { orderQueued: async () => { throw new Error('delivery failed'); } });
+    const failing = new OrdersService(new FakeRepository(), { orderCreated: async () => {}, orderQueued: async () => { throw new Error('delivery failed'); } });
     assert.equal((await failing.create(dineIn, waiter, false)).orderNumber, 1);
   } finally { console.error = originalError; }
 });

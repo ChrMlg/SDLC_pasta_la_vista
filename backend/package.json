@@ -2,14 +2,18 @@
   "name": "@bistro/backend",
   "private": true,
   "scripts": {
-    "start": "node dist/main.js",
+    "start": "node --env-file-if-exists=.env dist/main.js",
     "build": "tsc -p tsconfig.json",
     "typecheck": "tsc --noEmit -p tsconfig.json",
     "prisma:generate": "prisma generate",
     "prisma:migrate": "prisma migrate dev",
     "test:catalog:db": "node test/catalog-db.test.cjs",
     "test:catalog:availability:db": "node test/catalog-availability-db.test.cjs",
-    "test:catalog:menu:db": "node test/catalog-menu-db.test.cjs"
+    "test:catalog:menu:db": "node test/catalog-menu-db.test.cjs",
+    "test": "node --experimental-transform-types --test test/*.test.ts",
+    "test:integration": "node test/integration.cjs",
+    "prisma:deploy": "prisma migrate deploy",
+    "db:seed:qa": "node scripts/seed-qa.cjs"
   },
   "dependencies": {
     "@nestjs/common": "^10.4.0",

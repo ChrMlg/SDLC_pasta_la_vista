@@ -9,7 +9,6 @@ import { MenuService } from './menu.service';
   controllers: [MenuController],
   providers: [
     VerifiedSessionGuard,
-    { provide: PrismaClient, useFactory: () => new PrismaClient() },
     { provide: PrismaMenuRepository, useFactory: (db: PrismaClient) => new PrismaMenuRepository(db), inject: [PrismaClient] },
     { provide: MenuService, useFactory: (repo: PrismaMenuRepository) => new MenuService(repo), inject: [PrismaMenuRepository] },
   ],
