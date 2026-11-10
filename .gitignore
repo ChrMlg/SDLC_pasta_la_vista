@@ -7,3 +7,5 @@ dist/
 !.env.example
 !.env.compose.example
 *.log
+.*/
+!.github/
