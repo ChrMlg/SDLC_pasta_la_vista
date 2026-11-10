@@ -5,7 +5,7 @@
 Story: [H10 / issue #41](https://github.com/ChrMlg/SDLC_pasta_la_vista/issues/41).
 Branch: `feature/H10-table-reservations`, based on `develop`.
 
-H10 implements customer reservation creation and the availability query needed to select a time. H11 adds management occupancy and cancellation as documented below. Customer reservation lists and cancellation belong to H12 and remain pending.
+H10 implements customer reservation creation and the availability query needed to select a time. H11 adds management occupancy and cancellation. H12 adds customer reservation lists and cancellation, as documented below.
 
 | Method | Route (prefix `/api`) | Access |
 | --- | --- | --- |
@@ -124,7 +124,7 @@ npm test --workspace backend
 
 La suite H11 inicia una API temporal en el puerto 3324 y elimina exclusivamente sus fixtures. Comprueba sucursales con 12/10/8 mesas, duplicación de mesas en bloques, permisos, límite de dos horas, cancelaciones simultáneas, avisos y el flujo H10 → cancelación H11 → disponibilidad liberada. El error de notificación simulado en el log es intencional.
 
-Se actualizó la prueba H10 que afirmaba que las rutas gerenciales no existían, pues ahora son parte de H11. Las verificaciones de reglas y creación de H10 se conservan. Las rutas H12 siguen pendientes.
+Se actualizó la prueba H10 que afirmaba que las rutas gerenciales no existían, pues ahora son parte de H11. Las verificaciones de reglas y creación de H10 se conservan. Las rutas de cliente se incorporan con H12, descrita más adelante.
 
 Colección importable: `postman/H11-Reservations-Management.postman_collection.json` (27 solicitudes). Plantilla sin secretos: `postman/H11-Local.postman_environment.json`. Para preparar usuarios y mesas de QA se reutiliza `db:seed:h10:qa`; importar el entorno privado `postman/.env.h10.local` generado por ese comando, o copiar sus valores localmente a la plantilla H11. Elegir fecha futura con al menos dos horas de anticipación.
 
@@ -143,3 +143,63 @@ Razón: permitir que gerencia planifique la ocupación por sucursal y libere res
 El PR final va hacia `develop`. Como H11 depende de H10, antes de fusionar H10 el PR H11 puede mostrar también sus cambios heredados. Christian debe revisar y fusionar primero H10 (#68); después verificar que el diff del PR H11 contenga únicamente esta historia, aprobarlo y fusionarlo. Si H10 se integra mediante squash o rebase, sincronizar la base de H11 antes de revisar su diff. No se hizo merge, rebase, commit ni push durante la implementación de H11.
 
 Vincular el nuevo PR a #42 desde Development, pegar su enlace en la card del tablero y solicitar revisión a otro integrante. Se pueden completar las casillas técnicas de H11 con esta evidencia local; mantener la historia abierta y en revisión hasta aprobación y merge. La pausa de entrega ocurre aquí, antes de H12.
+
+## H12 - Consulta y cancelación de reservaciones propias
+
+Historia: [H12 / issue #43](https://github.com/ChrMlg/SDLC_pasta_la_vista/issues/43), consultada directamente el 2026-11-10 y contrastada con el documento de historias y las instrucciones de backend. Rama: `feature/H12-reservaciones-propias`, basada en H11 `ab8be9d`. Al retomar el trabajo ya existían esta rama y cambios parciales sin commit, que se conservaron y verificaron.
+
+| Método | Ruta | Acceso |
+| --- | --- | --- |
+| GET | `/api/me/reservations` | CUSTOMER; solo sus reservas |
+| PUT | `/api/me/reservations/:id/cancel` | CUSTOMER; solo una reserva propia |
+
+El listado devuelve un array de las reservaciones del `customerId` obtenido de la sesión verificada. Incluye activas, pasadas y canceladas en todas las sucursales donde ese cliente haya reservado, con orden `date ASC, startTime ASC, id ASC`. Sin reservas devuelve `[]`. No recibe filtros ni paginación; campos adicionales en la query devuelven 400 para evitar aparentar que puede elegirse otro cliente o sucursal.
+
+Cada elemento contiene `id`, `branchId`, `branchName`, `tableId`, `tableNumber`, `date`, `startTime`, `endTime`, `partySize`, `status`, `createdAt` y `updatedAt`. No incluye correos, teléfonos, identificadores de otros clientes ni relaciones de usuario. Las fechas de agenda usan America/El_Salvador; las marcas de auditoría se serializan en UTC.
+
+La cancelación acepta body omitido o `{}` y rechaza campos adicionales. Permite cancelar PENDING o CONFIRMED con al menos dos horas de anticipación, incluido el instante exacto del límite. La propiedad se comprueba antes de evaluar el estado y el plazo: una reserva ajena siempre devuelve 403, incluso si está cancelada o vencida; un identificador inexistente devuelve 404. Estas respuestas corresponden al contrato de #43.
+
+Errores uniformes `{code,message,field}`:
+
+- 400: ID inválido, parámetros no admitidos, plazo vencido o reserva ya cancelada.
+- 401: sesión ausente, inválida o revocada.
+- 403: rol distinto de CUSTOMER o reserva perteneciente a otro cliente.
+- 404: reserva inexistente.
+
+Se reutiliza `Reservation` y se extrae la cancelación de H11 a `reservation-cancellation.service.ts`. H11 y H12 delegan en este servicio con su política de acceso, conservando 404 para sucursal ajena en gerencia y 403 para propiedad ajena en cliente. El bloqueo `FOR UPDATE` y la comprobación del plazo posterior al bloqueo coordinan ambos endpoints. La actualización del cliente incluye `customerId` en el filtro, cambia `status=CANCELLED` y `updatedAt`, y no modifica el estado operativo de la mesa.
+
+Después del commit de base de datos, el servicio existente H26/H28 envía `reservation.cancelled:<id>` al propietario. Cancelaciones concurrentes de cliente/cliente o cliente/gerente producen una sola respuesta 200, las siguientes 400, y un único aviso. Un fallo del aviso se registra sin revertir la cancelación. El listado, la ocupación H11 y la disponibilidad H10 reflejan el cambio en la próxima consulta.
+
+### Código y verificación H12
+
+- `src/reservations/customer-reservations.controller.ts`: rutas de cliente protegidas por la sesión existente.
+- `src/reservations/customer-reservations.service.ts`: consulta restringida al propietario y delegación de cancelación.
+- `src/reservations/reservation-cancellation.service.ts`: transacción, permisos según ruta y notificación compartidos con H11.
+- `src/reservations/reservation-management.service.ts` y `reservations.module.ts`: reutilización del servicio e integración en el mismo módulo.
+- `test/h12-integration.test.cjs`: aislamiento entre clientes, orden del historial, permisos, plazos, concurrencia e integración H10/H11/H26/H28.
+
+No se agregan tablas, migraciones ni dependencias; se requiere la migración H10 existente. No se modificó Supabase. No se implementó frontend ni otra historia.
+
+```bash
+npm run build --workspace backend
+node backend/scripts/run-qa.cjs npm run test:h12 --workspace backend
+node backend/scripts/run-qa.cjs npm run test:h11 --workspace backend
+node backend/scripts/run-qa.cjs npm run test:h10 --workspace backend
+node backend/scripts/run-qa.cjs npm run test:integration --workspace backend
+npm test --workspace backend
+```
+
+Se reutiliza `.env.h10.qa.local`, privado, que selecciona PostgreSQL local `sdlc_h10_test`. La suite H12 inicia una API temporal en el puerto 3325, crea sus propios usuarios/reservas y elimina únicamente sus fixtures. El test de fallo de notificación produce un log de error intencional. El límite exacto de dos horas y su conversión de zona horaria se verifican en `h11-rules.test.cjs`, sobre la misma regla que invoca H12.
+
+Resultados del 2026-11-10: build correcto; H12 18 pruebas aprobadas (17 escenarios y test padre); H11 23; H10 28; cinco suites existentes y 108 comprobaciones HTTP de integración aprobadas. H10 pasa de 29 a 28 porque se retira la aserción obsoleta que exigía 404 en las rutas ahora implementadas de H12. En H11 solo se adapta la construcción del servicio en el test de fallo de notificación al nuevo servicio compartido. Evidencia: [H12_RESULTS.txt](../docs/qa/H12_RESULTS.txt).
+
+Colección: `postman/H12-Customer-Reservations.postman_collection.json` (26 solicitudes). Plantilla sin secretos: `postman/H12-Local.postman_environment.json`. Reutiliza los usuarios y el entorno privado generados por `db:seed:h10:qa`, descritos arriba. Crea una reserva futura con H10, consulta el historial, cancela y verifica el aviso. JSON, scripts y cuerpos validados; **no se ejecutó Postman/Newman para H12**, se ejecutaron las pruebas HTTP automatizadas. Los casos de otro cliente, plazo y concurrencia están en la suite H12.
+
+### Entrega H12
+
+Título del commit y PR: `feat(H12): consultar y cancelar reservaciones propias (#43)`.
+Razón: permitir al cliente gestionar sus propias reservas sin acceder a las de otro usuario y liberar disponibilidad dentro del plazo permitido.
+
+El PR final va hacia `develop`, con H12 #43 vinculada, Marceloereyes como assignee y otro integrante como reviewer. La rama hereda H10/H11 porque todavía no estaban integradas al iniciar este trabajo; primero se deben aprobar y fusionar esas dependencias, después revisar el diff de H12. Si las dependencias se integran mediante squash o rebase, sincronizar la base antes de revisar el diff. Mantener el PR abierto hasta aprobación, sin merge automático.
+
+Pegar el enlace del PR en la card H12 y ponerla en revisión si el tablero dispone de ese estado. Las casillas técnicas se respaldan con la evidencia local; no equivalen a despliegue en Supabase ni a aprobación de otro integrante. No se ejecutaron commit, push ni merge durante esta entrega. Pausa antes de H13.

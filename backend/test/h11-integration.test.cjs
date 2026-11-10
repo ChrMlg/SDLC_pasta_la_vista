@@ -7,6 +7,7 @@ const path = require('node:path');
 const { PrismaClient } = require('@prisma/client');
 const { hashPassword } = require('../dist/auth/credentials');
 const { ReservationManagementService } = require('../dist/reservations/reservation-management.service');
+const { ReservationCancellationService } = require('../dist/reservations/reservation-cancellation.service');
 const { localParts, timeMinutes, formatMinutes } = require('../dist/common/local-time');
 const { seedReservationTables } = require('../prisma/seed.cjs');
 
@@ -207,10 +208,10 @@ test('H11 #42: management occupancy and cancellation with PostgreSQL', { timeout
   await t.test('notification failure happens after commit and does not restore the reservation', async () => {
     const target = await reserve(tables[7]);
     let observedStatus;
-    const service = new ReservationManagementService(db, { async createNotification() {
+    const service = new ReservationManagementService(db, new ReservationCancellationService(db, { async createNotification() {
       observedStatus = (await db.reservation.findUniqueOrThrow({ where: { id: target.id } })).status;
       throw new Error('Simulated notification outage');
-    } });
+    } }));
     const result = await service.cancel(target.id, {}, { userId: users.manager.id, role: 'MANAGER', branchId: centro });
     assert.equal(observedStatus, 'CANCELLED'); assert.equal(result.status, 'CANCELLED');
     assert.equal((await db.reservation.findUniqueOrThrow({ where: { id: target.id } })).status, 'CANCELLED');

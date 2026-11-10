@@ -1,0 +1,661 @@
+H12 / issue #43 - Consulta y cancelacion de reservaciones propias
+Fecha: 2026-11-10 (America/El_Salvador)
+Rama: feature/H12-reservaciones-propias
+Base: H11 ab8be9d; hereda H10 c242e5a
+Contrato verificado en https://github.com/ChrMlg/SDLC_pasta_la_vista/issues/43
+Entorno: PostgreSQL 16 local, sdlc_h10_test, puerto 55440; API H12 temporal 3325.
+
+PASS: npm run build --workspace backend.
+PASS: test:h12 - 18 pruebas (17 escenarios + padre), 0 fallos.
+PASS: test:h11 - 23 pruebas, 0 fallos; incluye limite exacto de dos horas compartido con H12.
+PASS: test:h10 - 28 pruebas, 0 fallos.
+PASS: npm test --workspace backend - 5 archivos de pruebas, 0 fallos.
+PASS: test:integration - 108 comprobaciones HTTP/concurrencia.
+PASS: git diff --check.
+PASS: coleccion Postman JSON, scripts y cuerpos validos; entorno sin credenciales.
+
+No hay migracion nueva. Se reutiliza el esquema de H10. No se modifico Supabase.
+Coleccion H12: 26 solicitudes preparadas; no ejecutadas en Postman/Newman.
+La verificacion real de endpoints se realizo con tests HTTP y fixtures locales.
+
+La primera corrida del test H12 detecto una expectativa incorrecta del propio
+fixture: logout devuelve 204 sin JSON. Se corrigio el test sin cambiar auth;
+la siguiente corrida y todas las regresiones resultaron aprobadas.
+H10 tiene una prueba menos porque se retira la asercion que esperaba 404
+para las rutas de H12; ahora se verifican permisos y funcionalidad en test:h12.
+El error de notificacion simulado en los logs es intencional.
+
+
+Comando: node backend/scripts/run-qa.cjs npm run test:h12 --workspace backend
+
+
+> test:h12
+> node --test test/h12-integration.test.cjs
+
+TAP version 13
+# Subtest: H12 \#43: customer reservations with PostgreSQL
+    # Subtest: both routes reject missing, forged and revoked sessions
+    ok 1 - both routes reject missing, forged and revoked sessions
+      ---
+      duration_ms: 64.29722
+      type: 'test'
+      ...
+    # Subtest: waiter cannot use customer reservation routes
+    ok 2 - waiter cannot use customer reservation routes
+      ---
+      duration_ms: 6.664293
+      type: 'test'
+      ...
+    # Subtest: kitchen cannot use customer reservation routes
+    ok 3 - kitchen cannot use customer reservation routes
+      ---
+      duration_ms: 5.22539
+      type: 'test'
+      ...
+    # Subtest: manager cannot use customer reservation routes
+    ok 4 - manager cannot use customer reservation routes
+      ---
+      duration_ms: 4.489608
+      type: 'test'
+      ...
+    # Subtest: general cannot use customer reservation routes
+    ok 5 - general cannot use customer reservation routes
+      ---
+      duration_ms: 4.410095
+      type: 'test'
+      ...
+    # Subtest: lists only own reservations across branches, including past and cancelled, in stable chronological order
+    ok 6 - lists only own reservations across branches, including past and cancelled, in stable chronological order
+      ---
+      duration_ms: 12.449716
+      type: 'test'
+      ...
+    # Subtest: customer without reservations receives an empty list
+    ok 7 - customer without reservations receives an empty list
+      ---
+      duration_ms: 3.870943
+      type: 'test'
+      ...
+    # Subtest: rejects identity, branch and state injection instead of using client filters
+    ok 8 - rejects identity, branch and state injection instead of using client filters
+      ---
+      duration_ms: 30.700769
+      type: 'test'
+      ...
+    # Subtest: foreign reservation is 403, missing reservation is 404 and neither creates notifications
+    ok 9 - foreign reservation is 403, missing reservation is 404 and neither creates notifications
+      ---
+      duration_ms: 24.551493
+      type: 'test'
+      ...
+    # Subtest: expired deadline returns 400 without changing state or timestamps
+    ok 10 - expired deadline returns 400 without changing state or timestamps
+      ---
+      duration_ms: 24.385321
+      type: 'test'
+      ...
+    # Subtest: cancels own PENDING reservation and updates timestamp and subsequent listing
+    ok 11 - cancels own PENDING reservation and updates timestamp and subsequent listing
+      ---
+      duration_ms: 28.504392
+      type: 'test'
+      ...
+    # Subtest: customer can cancel own reservation in any branch without changing the operational table state
+    ok 12 - customer can cancel own reservation in any branch without changing the operational table state
+      ---
+      duration_ms: 20.884788
+      type: 'test'
+      ...
+    # Subtest: cancellation notice is sent to the owner once; repeated cancellation is 400
+    ok 13 - cancellation notice is sent to the owner once; repeated cancellation is 400
+      ---
+      duration_ms: 39.580338
+      type: 'test'
+      ...
+    # Subtest: concurrent customer cancellations produce a single success and a single notice
+    ok 14 - concurrent customer cancellations produce a single success and a single notice
+      ---
+      duration_ms: 33.69451
+      type: 'test'
+      ...
+    # Subtest: H11 and H12 share the same lock when manager and customer cancel concurrently
+    ok 15 - H11 and H12 share the same lock when manager and customer cancel concurrently
+      ---
+      duration_ms: 21.509931
+      type: 'test'
+      ...
+    # Subtest: H10 create, H12 list and cancel, H11 occupancy and H10 availability remain consistent
+    ok 16 - H10 create, H12 list and cancel, H11 occupancy and H10 availability remain consistent
+      ---
+      duration_ms: 79.379212
+      type: 'test'
+      ...
+# [Nest] 13812  - 11/10/2026, 2:12:37 PM   ERROR [ReservationCancellationService] No se pudo registrar el aviso de cancelación de la reservación 8fcbf8a2-1875-4fb9-a1ba-7351937b90e6
+    # Subtest: notification failure does not undo a committed customer cancellation
+    ok 17 - notification failure does not undo a committed customer cancellation
+      ---
+      duration_ms: 10.635533
+      type: 'test'
+      ...
+    1..17
+ok 1 - H12 \#43: customer reservations with PostgreSQL
+  ---
+  duration_ms: 1082.712147
+  type: 'test'
+  ...
+1..1
+# tests 18
+# suites 0
+# pass 18
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 1186.457372
+
+Comando: node backend/scripts/run-qa.cjs npm run test:h11 --workspace backend
+
+
+> test:h11
+> node --test test/h11-rules.test.cjs test/h11-integration.test.cjs
+
+TAP version 13
+# Subtest: H11 \#42: management occupancy and cancellation with PostgreSQL
+    # Subtest: both endpoints require a verified session, not forged identity headers
+    ok 1 - both endpoints require a verified session, not forged identity headers
+      ---
+      duration_ms: 13.257703
+      type: 'test'
+      ...
+    # Subtest: customer cannot access management endpoints
+    ok 2 - customer cannot access management endpoints
+      ---
+      duration_ms: 9.794099
+      type: 'test'
+      ...
+    # Subtest: waiter cannot access management endpoints
+    ok 3 - waiter cannot access management endpoints
+      ---
+      duration_ms: 6.806708
+      type: 'test'
+      ...
+    # Subtest: kitchen cannot access management endpoints
+    ok 4 - kitchen cannot access management endpoints
+      ---
+      duration_ms: 7.13617
+      type: 'test'
+      ...
+    # Subtest: manager branch isolation returns 404 and leaves reservations untouched
+    ok 5 - manager branch isolation returns 404 and leaves reservations untouched
+      ---
+      duration_ms: 32.457155
+      type: 'test'
+      ...
+    # Subtest: occupancy counts distinct tables, overlaps, pending states and only the requested day
+    ok 6 - occupancy counts distinct tables, overlaps, pending states and only the requested day
+      ---
+      duration_ms: 15.969755
+      type: 'test'
+      ...
+    # Subtest: general manager can select branches with 12, 10 and 8 tables
+    ok 7 - general manager can select branches with 12, 10 and 8 tables
+      ---
+      duration_ms: 32.593337
+      type: 'test'
+      ...
+    # Subtest: empty branches and historical days return zero without division errors
+    ok 8 - empty branches and historical days return zero without division errors
+      ---
+      duration_ms: 17.966117
+      type: 'test'
+      ...
+    # Subtest: operational table status does not rewrite future projected occupancy
+    ok 9 - operational table status does not rewrite future projected occupancy
+      ---
+      duration_ms: 16.501358
+      type: 'test'
+      ...
+    # Subtest: branch hours bound the slots including a final partial hour
+    ok 10 - branch hours bound the slots including a final partial hour
+      ---
+      duration_ms: 16.754929
+      type: 'test'
+      ...
+    # Subtest: invalid IDs, dates, extra fields and missing resources return uniform errors
+    ok 11 - invalid IDs, dates, extra fields and missing resources return uniform errors
+      ---
+      duration_ms: 55.478714
+      type: 'test'
+      ...
+    # Subtest: cancelling PENDING updates state and timestamp and recalculates occupancy
+    ok 12 - cancelling PENDING updates state and timestamp and recalculates occupancy
+      ---
+      duration_ms: 44.317794
+      type: 'test'
+      ...
+    # Subtest: cancellation notification is unique and only visible to the reservation customer
+    ok 13 - cancellation notification is unique and only visible to the reservation customer
+      ---
+      duration_ms: 38.398089
+      type: 'test'
+      ...
+    # Subtest: general manager cancels a reservation in another branch
+    ok 14 - general manager cancels a reservation in another branch
+      ---
+      duration_ms: 22.296107
+      type: 'test'
+      ...
+    # Subtest: expired deadlines leave state, timestamp and notifications unchanged
+    ok 15 - expired deadlines leave state, timestamp and notifications unchanged
+      ---
+      duration_ms: 18.062607
+      type: 'test'
+      ...
+    # Subtest: concurrent cancellations produce one success and one notification
+    ok 16 - concurrent cancellations produce one success and one notification
+      ---
+      duration_ms: 31.848597
+      type: 'test'
+      ...
+    # Subtest: H10 creation followed by H11 cancellation releases availability without changing table status
+    ok 17 - H10 creation followed by H11 cancellation releases availability without changing table status
+      ---
+      duration_ms: 66.945122
+      type: 'test'
+      ...
+# [Nest] 13976  - 11/10/2026, 2:12:38 PM   ERROR [ReservationCancellationService] No se pudo registrar el aviso de cancelación de la reservación bcb5acb4-95f2-4ef9-963b-f1a82c5e6935
+    # Subtest: notification failure happens after commit and does not restore the reservation
+    ok 18 - notification failure happens after commit and does not restore the reservation
+      ---
+      duration_ms: 12.191226
+      type: 'test'
+      ...
+    1..18
+ok 1 - H11 \#42: management occupancy and cancellation with PostgreSQL
+  ---
+  duration_ms: 1261.124579
+  type: 'test'
+  ...
+# Subtest: H11: cancellation includes the exact two-hour boundary in El Salvador
+ok 2 - H11: cancellation includes the exact two-hour boundary in El Salvador
+  ---
+  duration_ms: 1.193182
+  type: 'test'
+  ...
+# Subtest: H11: cancellation deadline crosses the local calendar day correctly
+ok 3 - H11: cancellation deadline crosses the local calendar day correctly
+  ---
+  duration_ms: 0.156084
+  type: 'test'
+  ...
+# Subtest: H11: rejects a second cancellation even before its deadline
+ok 4 - H11: rejects a second cancellation even before its deadline
+  ---
+  duration_ms: 0.099008
+  type: 'test'
+  ...
+# Subtest: H11: occupancy accepts historical dates and rejects invalid or extra filters
+ok 5 - H11: occupancy accepts historical dates and rejects invalid or extra filters
+  ---
+  duration_ms: 0.633336
+  type: 'test'
+  ...
+1..5
+# tests 23
+# suites 0
+# pass 23
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 1392.410654
+
+Comando: node backend/scripts/run-qa.cjs npm run test:h10 --workspace backend
+
+
+> test:h10
+> node --test test/h10-rules.test.cjs test/h10-integration.test.cjs
+
+TAP version 13
+# Subtest: H10 \#41: reservation API with PostgreSQL
+    # Subtest: POST and availability require a verified session
+    ok 1 - POST and availability require a verified session
+      ---
+      duration_ms: 8.726921
+      type: 'test'
+      ...
+    # Subtest: waiter cannot use customer reservation endpoints
+    ok 2 - waiter cannot use customer reservation endpoints
+      ---
+      duration_ms: 8.059638
+      type: 'test'
+      ...
+    # Subtest: kitchen cannot use customer reservation endpoints
+    ok 3 - kitchen cannot use customer reservation endpoints
+      ---
+      duration_ms: 5.302726
+      type: 'test'
+      ...
+    # Subtest: manager cannot use customer reservation endpoints
+    ok 4 - manager cannot use customer reservation endpoints
+      ---
+      duration_ms: 4.488775
+      type: 'test'
+      ...
+    # Subtest: general cannot use customer reservation endpoints
+    ok 5 - general cannot use customer reservation endpoints
+      ---
+      duration_ms: 6.079381
+      type: 'test'
+      ...
+    # Subtest: availability exposes hourly choices without customer or table data
+    ok 6 - availability exposes hourly choices without customer or table data
+      ---
+      duration_ms: 12.534364
+      type: 'test'
+      ...
+    # Subtest: creates a confirmed 90-minute reservation on the smallest suitable table
+    ok 7 - creates a confirmed 90-minute reservation on the smallest suitable table
+      ---
+      duration_ms: 24.010897
+      type: 'test'
+      ...
+    # Subtest: confirmation notification is persisted only for the reservation owner
+    ok 8 - confirmation notification is persisted only for the reservation owner
+      ---
+      duration_ms: 19.736371
+      type: 'test'
+      ...
+    # Subtest: another customer can use a different table at the same time
+    ok 9 - another customer can use a different table at the same time
+      ---
+      duration_ms: 16.075646
+      type: 'test'
+      ...
+    # Subtest: a full branch rejects overlapping requests without creating rows or notices
+    ok 10 - a full branch rejects overlapping requests without creating rows or notices
+      ---
+      duration_ms: 17.833847
+      type: 'test'
+      ...
+    # Subtest: a later nonoverlapping slot is accepted
+    ok 11 - a later nonoverlapping slot is accepted
+      ---
+      duration_ms: 13.254511
+      type: 'test'
+      ...
+    # Subtest: date and branch boundaries have independent availability
+    ok 12 - date and branch boundaries have independent availability
+      ---
+      duration_ms: 23.63143
+      type: 'test'
+      ...
+    # Subtest: invalid body fields and types return uniform 400 errors
+    ok 13 - invalid body fields and types return uniform 400 errors
+      ---
+      duration_ms: 54.508483
+      type: 'test'
+      ...
+    # Subtest: unknown branches return 404 and empty branches return 409
+    ok 14 - unknown branches return 404 and empty branches return 409
+      ---
+      duration_ms: 19.574371
+      type: 'test'
+      ...
+    # Subtest: out-of-service tables and unset capacities cannot be assigned
+    ok 15 - out-of-service tables and unset capacities cannot be assigned
+      ---
+      duration_ms: 9.683991
+      type: 'test'
+      ...
+    # Subtest: availability validates its date, quantity, branch ID and filters
+    ok 16 - availability validates its date, quantity, branch ID and filters
+      ---
+      duration_ms: 18.530662
+      type: 'test'
+      ...
+    # Subtest: two customers racing for the last table receive exactly one 201 and one 409
+    ok 17 - two customers racing for the last table receive exactly one 201 and one 409
+      ---
+      duration_ms: 22.832572
+      type: 'test'
+      ...
+    # Subtest: PENDING reservations block capacity and CANCELLED reservations release it
+    ok 18 - PENDING reservations block capacity and CANCELLED reservations release it
+      ---
+      duration_ms: 27.059886
+      type: 'test'
+      ...
+    # Subtest: per-branch opening hours are respected
+    ok 19 - per-branch opening hours are respected
+      ---
+      duration_ms: 25.024018
+      type: 'test'
+      ...
+# [Nest] 14068  - 11/10/2026, 2:12:40 PM   ERROR [ReservationsService] No se pudo registrar el aviso de la reservación 9501e043-7e6b-4818-8213-aa96dd08b06c
+    # Subtest: notification failure does not roll back a committed reservation
+    ok 20 - notification failure does not roll back a committed reservation
+      ---
+      duration_ms: 16.613504
+      type: 'test'
+      ...
+    # Subtest: duplicate confirmation events remain unique and wrong recipients are rejected
+    ok 21 - duplicate confirmation events remain unique and wrong recipients are rejected
+      ---
+      duration_ms: 10.291348
+      type: 'test'
+      ...
+    # Subtest: initial table seed is repeatable and preserves existing capacities and statuses
+    ok 22 - initial table seed is repeatable and preserves existing capacities and statuses
+      ---
+      duration_ms: 137.286106
+      type: 'test'
+      ...
+    # Subtest: database constraints reject invalid capacity, quantity, hours and duration
+    ok 23 - database constraints reject invalid capacity, quantity, hours and duration
+      ---
+      duration_ms: 14.373355
+      type: 'test'
+      ...
+    1..23
+ok 1 - H10 \#41: reservation API with PostgreSQL
+  ---
+  duration_ms: 1274.795117
+  type: 'test'
+  ...
+# Subtest: H10: rejects malformed dates, times, quantities and client-selected identity
+ok 2 - H10: rejects malformed dates, times, quantities and client-selected identity
+  ---
+  duration_ms: 2.037248
+  type: 'test'
+  ...
+# Subtest: H10: enforces 90 minutes, hourly starts and full duration before closing
+ok 3 - H10: enforces 90 minutes, hourly starts and full duration before closing
+  ---
+  duration_ms: 0.350712
+  type: 'test'
+  ...
+# Subtest: H10: compares the exact start instant in El Salvador time
+ok 4 - H10: compares the exact start instant in El Salvador time
+  ---
+  duration_ms: 11.023889
+  type: 'test'
+  ...
+# Subtest: H10: adjacent intervals do not overlap; partial and contained intervals do
+ok 5 - H10: adjacent intervals do not overlap; partial and contained intervals do
+  ---
+  duration_ms: 0.154025
+  type: 'test'
+  ...
+1..5
+# tests 28
+# suites 0
+# pass 28
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 1393.50586
+
+Comando: npm test --workspace backend
+
+
+> test
+> node --experimental-transform-types --test test/*.test.ts
+
+TAP version 13
+# Subtest: test/auth-credentials.test.ts
+ok 1 - test/auth-credentials.test.ts
+  ---
+  duration_ms: 255.213094
+  type: 'test'
+  ...
+# Subtest: test/billing-math.test.ts
+ok 2 - test/billing-math.test.ts
+  ---
+  duration_ms: 72.929588
+  type: 'test'
+  ...
+# Subtest: test/menu.test.ts
+ok 3 - test/menu.test.ts
+  ---
+  duration_ms: 210.593652
+  type: 'test'
+  ...
+# Subtest: test/order-transition.test.ts
+ok 4 - test/order-transition.test.ts
+  ---
+  duration_ms: 108.970423
+  type: 'test'
+  ...
+# Subtest: test/orders.test.ts
+ok 5 - test/orders.test.ts
+  ---
+  duration_ms: 156.348858
+  type: 'test'
+  ...
+1..5
+# tests 5
+# suites 0
+# pass 5
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 262.467925
+
+Comando: node backend/scripts/run-qa.cjs npm run test:integration --workspace backend
+
+
+> test:integration
+> node test/integration.cjs
+
+OK 1: Login customer
+OK 2: Login otherCustomer
+OK 3: Login waiter
+OK 4: Login otherWaiter
+OK 5: Login kitchen
+OK 6: Login otherKitchen
+OK 7: Login manager
+OK 8: Login otherManager
+OK 9: Login general
+OK 10: Health con consulta PostgreSQL
+OK 11: Sin sesión
+OK 12: No se confía identidad en cabeceras
+OK 13: Login incorrecto
+OK 14: Registro rechaza escalación de rol
+OK 15: Registro exige perfil
+OK 16: Registro válido
+OK 17: Correo duplicado
+OK 18: Cuenta desactivada invalida sesión
+OK 19: Cuenta desactivada no inicia sesión
+OK 20: H1 crear platillo
+OK 21: H1 nombre normalizado duplicado
+OK 22: H1 rol customer no escribe
+OK 23: H1 rol waiter no escribe
+OK 24: H1 rol kitchen no escribe
+OK 25: H1 gerente ajeno
+OK 26: H1 precio inválido
+OK 27: H3 menú de sucursal
+OK 28: H3 página inválida
+OK 29: H3 sucursal ajena para personal
+OK 30: H2 concurrencia 200/409
+OK 31: H5 platillo no disponible
+OK 32: H2 rehabilitar
+OK 33: H5 cantidad cero
+OK 34: H5 identidad inyectada
+OK 35: H4 rol incorrecto
+OK 36: H4 sucursal ajena
+OK 37: H5 pedido TAKEAWAY
+OK 38: M1 cambio posterior no cambia precio histórico
+OK 39: H16 manager no cierra cuenta
+OK 40: H16 general no cierra cuenta
+OK 41: H16 kitchen no cierra cuenta
+OK 42: H16 cuenta de otro cliente
+OK 43: H16 cuenta TAKEAWAY propia
+OK 44: H16 cierre repetido
+OK 45: H16 consulta ajena
+OK 46: H17 manager no cobra
+OK 47: H17 general no cobra
+OK 48: H17 kitchen no cobra
+OK 49: H17 otherWaiter no cobra
+OK 50: H17 clave requerida
+OK 51: H17 valida cardNumber
+OK 52: H17 valida cardHolder
+OK 53: H17 valida cvv
+OK 54: H17 valida expMonth
+OK 55: H17 valida expYear
+OK 56: H17 valida clientId
+OK 57: H17 tarjeta no admitida
+OK 58: H17 rechazo simulado
+OK 59: H17 reintento misma clave rechazada
+OK 60: H17 pago simultáneo misma clave
+OK 61: H17 pago simultáneo otra clave
+OK 62: H17 pago aprobado
+OK 63: H17 idempotencia después del pago
+OK 64: H17 cuenta pagada nueva clave
+OK 65: H18 comprobante propio
+OK 66: H18 menú editado después del pago
+OK 67: H18 comprobante inmutable
+OK 68: H18 comprobante ajeno
+OK 69: H18 listado paginado
+OK 70: H18 página inválida
+OK 71: H18 PDF
+OK 72: H5 mesa sin asignación
+OK 73: Asignación mesa
+OK 74: H4 pedido de mesero
+OK 75: Mesa con pedido de mesero no se libera
+OK 76: H16 pedido pendiente impide cierre
+OK 77: Código malformado
+OK 78: Código temporal
+OK 79: Resumen código
+OK 80: código consumido una sola vez
+OK 81: Código consumido devuelve conflicto
+OK 82: H16 cierre de mesa entregada
+OK 83: M2 mesa en cobro no recibe nuevos pedidos
+OK 84: H17 mesero cobra mesa
+OK 85: H27 filtro inválido
+OK 86: H27 destinatario inyectado
+OK 87: H27 filtro de módulo
+OK 88: H27 bandeja ajena aislada
+OK 89: H29 seguimiento sucursal
+OK 90: H29 sucursal ajena
+OK 91: H29 estado inválido
+OK 92: H30 cola autorizada
+OK 93: H30 mesero no consulta cocina
+OK 94: H30 sucursal ajena
+OK 95: H30 estado no operativo
+OK 96: No permite entrega directa desde READY
+OK 97: Entrega legacy mantiene comanda READY
+OK 98: Pedido para carrera de correlativo
+OK 99: Cuenta para carrera de correlativo
+OK 100: Pedido para carrera de correlativo
+OK 101: Cuenta para carrera de correlativo
+OK 102: Pago concurrente de cuentas distintas
+OK 103: Pago concurrente de cuentas distintas
+OK 104: Pedido para timeout
+OK 105: Cuenta para timeout
+OK 106: Reintenta pago con intento vencido
+OK 107: Logout
+OK 108: Cookie revocada
+RESULTADO: 108 comprobaciones HTTP/concurrencia aprobadas; además aserciones de persistencia.
