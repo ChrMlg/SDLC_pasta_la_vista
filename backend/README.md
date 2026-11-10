@@ -30,7 +30,7 @@ After commit, the existing notification service records `reservation.confirmed:<
 
 `20261109000000_h10_table_reservations` adds only Reservation, branch opening hours, nullable table capacity, indexes, and validation constraints. Existing records are retained. Existing table capacities remain unset until explicitly configured.
 
-The Prisma seed requires three existing branch IDs through `RESERVATION_CENTRO_ID`, `RESERVATION_BAMBU_ID`, and `RESERVATION_RAMBLAS_ID`. It prepares 12/10/8 tables with the documented capacity groups. It fills unset capacities, preserves existing capacities and statuses, and can be repeated without duplicates. Run `prisma db seed --schema backend/prisma/schema.prisma` with those variables only after selecting the intended database. Historical branch names and identities are not replaced automatically.
+The Prisma seed requires three existing branch IDs through `RESERVATION_CENTRO_ID`, `RESERVATION_BAMBU_ID`, and `RESERVATION_RAMBLAS_ID`. It prepares 12/10/8 tables with the documented capacity groups. It fills unset capacities, preserves existing capacities and statuses, and can be repeated without duplicates. From the repository root, run `SEED_SCOPE=reservations npm run prisma:seed --workspace backend` with those variables only after selecting the intended database. Historical branch names and identities are not replaced automatically.
 
 No migrations or seeds from this story have been applied to Supabase. Local QA uses a separate PostgreSQL database.
 
@@ -203,3 +203,60 @@ Razón: permitir al cliente gestionar sus propias reservas sin acceder a las de 
 El PR final va hacia `develop`, con H12 #43 vinculada, Marceloereyes como assignee y otro integrante como reviewer. La rama hereda H10/H11 porque todavía no estaban integradas al iniciar este trabajo; primero se deben aprobar y fusionar esas dependencias, después revisar el diff de H12. Si las dependencias se integran mediante squash o rebase, sincronizar la base antes de revisar el diff. Mantener el PR abierto hasta aprobación, sin merge automático.
 
 Pegar el enlace del PR en la card H12 y ponerla en revisión si el tablero dispone de ese estado. Las casillas técnicas se respaldan con la evidencia local; no equivalen a despliegue en Supabase ni a aprobación de otro integrante. No se ejecutaron commit, push ni merge durante esta entrega. Pausa antes de H13.
+
+## H13 - Consulta de niveles de inventario
+
+Historia: [H13 / issue #44](https://github.com/ChrMlg/SDLC_pasta_la_vista/issues/44), consultada el 2026-11-10 y contrastada con el documento de historias. Rama: `feature/H13-consulta-inventario`, basada en H12 `ff23826` mientras las historias anteriores esperan revisión e integración.
+
+`GET /api/management/branches/:branchId/inventory` devuelve un array de insumos con `id`, `branchId`, `name`, `unit`, `minStock` y `currentStock`, ordenados por `name ASC, id ASC`. MANAGER solo puede consultar su sucursal asignada; GENERAL_MANAGER puede seleccionar cualquier sucursal existente. La identidad y la sucursal asignada se obtienen de la sesión verificada. Una sucursal existente sin insumos devuelve `200 []`. Cada consulta lee las existencias persistidas, sin modificarlas.
+
+Errores uniformes `{code,message,field}`: 400 por UUID inválido o filtros no admitidos; 401 sin sesión válida; 403 para CUSTOMER, WAITER y KITCHEN; 404 por sucursal inexistente, ajena al MANAGER o gerente sin sucursal asignada. H13 no define filtros ni paginación.
+
+El módulo `src/inventory` contiene controlador, servicio y módulo NestJS, siguiendo la estructura del backend existente. Reutiliza Prisma y la autenticación común. No agrega dependencias. La migración `20261110000000_h13_inventory_items` crea `InventoryItem`, con cantidades enteras no negativas, nombre/unidad obligatorios, relación a Branch y unicidad de nombre por sucursal. No cambia datos de los módulos existentes. Esta historia consulta insumos; los movimientos manuales y las alertas corresponden a H14/H15. El inventario no se descuenta automáticamente por recetas ni pedidos.
+
+### Seed de insumos
+
+`prisma/seed-inventory.cjs` prepara un catálogo **de ejemplo** por sucursal: Arroz y Harina (g, mínimo 5000), Aceite (ml, mínimo 2000), Sal (g, mínimo 500) y Tomate (unidad, mínimo 20), todos con existencia inicial 0. Los documentos no fijan un catálogo ni cantidades iniciales: deben ajustarse a los insumos y umbrales acordados antes del despliegue compartido. Cero no representa un conteo físico verificado.
+
+El seed valida que los IDs sean distintos y que todas las sucursales existan antes de insertar. Puede repetirse, incluso concurrentemente, sin duplicar insumos ni reemplazar cantidades, unidades o mínimos existentes. Solo actúa sobre las sucursales indicadas; no crea sucursales ni modifica mesas.
+
+El punto de entrada de Prisma admite `SEED_SCOPE=inventory` e `INVENTORY_BRANCH_IDS`, separados por comas. El scope por defecto sigue siendo `reservations` para conservar H10. Desde la raíz, con las variables privadas de conexión apuntando a la base elegida y las migraciones aplicadas:
+
+```bash
+SEED_SCOPE=inventory INVENTORY_BRANCH_IDS='<uuid-centro>,<uuid-bambu>,<uuid-ramblas>' npm run prisma:seed --workspace backend
+```
+
+El comando se ejecuta en el workspace backend, donde está configurado `prisma.seed`. La prueba H13 verifica ese punto de entrada real sin requerir IDs de mesas/reservaciones.
+
+### Verificación local H13
+
+Se reutiliza el PostgreSQL local aislado y `.env.h10.qa.local` descritos arriba. No se aplicaron migraciones ni seeds en Supabase.
+
+```bash
+node backend/scripts/run-qa.cjs ./node_modules/.bin/prisma generate --schema backend/prisma/schema.prisma
+node backend/scripts/run-qa.cjs ./node_modules/.bin/prisma migrate deploy --schema backend/prisma/schema.prisma
+npm run build --workspace backend
+node backend/scripts/run-qa.cjs npm run test:h13 --workspace backend
+```
+
+La suite inicia la API en el puerto 3326, crea sus propias sucursales/usuarios y elimina únicamente esos fixtures. Verifica permisos, aislamiento, sesión revocada, listado completo, sucursal vacía/inexistente, recarga del stock persistido, restricciones de base y seed repetible/concurrente. Resultado: 16 escenarios y test padre aprobados; también pasan H10 (28), H11 (23), H12 (18), 25 pruebas unitarias y 108 comprobaciones HTTP existentes. Esquema válido y migraciones locales actualizadas. Evidencia: [H13_RESULTS.txt](../docs/qa/H13_RESULTS.txt).
+
+Colección: `postman/H13-Inventory.postman_collection.json`, con 23 solicitudes. Plantilla sin secretos: `postman/H13-Local.postman_environment.json`. Para preparar sucursales y usuarios locales e iniciar la API:
+
+```bash
+node backend/scripts/run-qa.cjs npm run db:seed:h13:qa --workspace backend
+PORT=3310 node backend/scripts/run-qa.cjs node backend/dist/main.js
+```
+
+Importar la colección y el entorno privado generado en `postman/.env.h13.local`. Este archivo contiene credenciales aleatorias, queda ignorado por Git y no se entrega. El seed QA solo admite una base local con nombre terminado en `_test`. Crea dos sucursales con insumos y una vacía. JSON, cuerpos y scripts de la colección fueron validados; **Postman/Newman no se ejecutó**, la evidencia HTTP corresponde a las pruebas automatizadas anteriores.
+
+### Entrega H13
+
+Título del commit y PR: `feat(H13): consultar inventario por sucursal (#44)`.
+Razón: permitir a gerencia consultar existencias de insumos con aislamiento por sucursal y datos iniciales repetibles, sin alterar el stock durante la consulta.
+
+El PR va hacia `develop`. La rama hereda H10-H12; revisar e integrar esas historias primero, y comprobar después que el diff de H13 contenga solo esta historia. Si se integran mediante squash/rebase, sincronizar su base antes de revisarla. La aprobación debe realizarla otro integrante; mantener el PR abierto hasta entonces.
+
+Vincular el PR a #44 desde Development y copiar su enlace a la card H13. Al consultar la issue, seguía asignada a DiegoJacob0: actualizar responsable y planificación según el reparto acordado por el equipo antes de presentarla como trabajo individual. Las casillas backend pueden marcarse con esta evidencia; frontend, despliegue compartido, aprobación y merge siguen pendientes. Poner la card en revisión si existe ese estado; en caso contrario mantener In progress. No marcar Done todavía.
+
+H13 se entrega sin commit ni push para que el responsable los realice. La pausa de esta entrega ocurre antes de H14.
