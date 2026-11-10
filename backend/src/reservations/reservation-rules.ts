@@ -1,7 +1,14 @@
-import { invalid } from '../common/business-error';
+import { BusinessError, invalid } from '../common/business-error';
 import { formatMinutes, localInstant, timeMinutes } from '../common/local-time';
 
 export const reservationDurationMinutes = 90;
+
+export function assertCancellationAllowed(date: string, startTime: string, status: string, now = new Date()): void {
+  if (status === 'CANCELLED')
+    throw new BusinessError(400, 'RESERVATION_ALREADY_CANCELLED', 'La reservación ya está cancelada', 'status');
+  if (localInstant(date, startTime).getTime() - now.getTime() < 2 * 60 * 60 * 1000)
+    throw new BusinessError(400, 'CANCELLATION_DEADLINE_PASSED', 'La cancelación requiere al menos dos horas de anticipación', 'startTime');
+}
 
 export function reservationEnd(date: string, time: string, openingTime: string, closingTime: string, now = new Date()): string {
   const minutes = timeMinutes(time);
