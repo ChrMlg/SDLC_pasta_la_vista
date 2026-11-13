@@ -238,8 +238,4 @@ test('H10 #41: reservation API with PostgreSQL', { timeout: 60000 }, async t => 
     await assert.rejects(db.reservation.update({ where: { id: first.id }, data: { date: '2031-02-29' } }));
     await assert.rejects(db.branch.update({ where: { id: branch }, data: { openingTime: '22:00', closingTime: '12:00' } }));
   });
-  await t.test('H12 customer listing and cancellation routes are not introduced', async () => {
-    await request('customer', 'GET', '/me/reservations', undefined, 404);
-    await request('customer', 'PUT', `/me/reservations/${first.id}/cancel`, {}, 404);
-  });
 });

@@ -10,6 +10,7 @@ import { BillingModule } from './billing/billing.module';
 import { NotificationsModule } from './notifications/notifications.module';
 import { AuthModule } from './auth/auth.module';
 import { ReservationsModule } from './reservations/reservations.module';
+import { InventoryModule } from './inventory/inventory.module';
 import { AuthService } from './auth/auth.service';
 import type { AuthenticatedRequest } from './common/session';
 
@@ -20,7 +21,7 @@ class HealthController {
   async health() { await this.db.$queryRaw`SELECT 1`; return { status: 'ok' }; }
 }
 
-@Module({ controllers: [HealthController], imports: [PrismaModule, AuthModule, MenuModule, OrdersModule, BillingModule, NotificationsModule, ReservationsModule] })
+@Module({ controllers: [HealthController], imports: [PrismaModule, AuthModule, MenuModule, OrdersModule, BillingModule, NotificationsModule, ReservationsModule, InventoryModule] })
 class AppModule {}
 
 async function bootstrap() {

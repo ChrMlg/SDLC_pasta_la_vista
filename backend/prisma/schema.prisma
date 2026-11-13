@@ -44,6 +44,7 @@ model Branch {
   openingTime String @default("12:00") @db.Char(5)
   closingTime String @default("22:00") @db.Char(5)
   reservations Reservation[]
+  inventoryItems InventoryItem[]
 }
 
 model User {
@@ -339,6 +340,18 @@ enum ReservationStatus {
   PENDING
   CONFIRMED
   CANCELLED
+}
+
+model InventoryItem {
+  id String @id @default(uuid()) @db.Uuid
+  branchId String @db.Uuid
+  branch Branch @relation(fields: [branchId], references: [id], onDelete: Restrict)
+  name String @db.VarChar(100)
+  unit String @db.VarChar(20)
+  minStock Int
+  currentStock Int
+
+  @@unique([branchId, name])
 }
 
 model Reservation {

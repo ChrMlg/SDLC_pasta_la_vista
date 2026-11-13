@@ -13,10 +13,14 @@
     "test": "node --experimental-transform-types --test test/*.test.ts",
     "test:integration": "node test/integration.cjs",
     "prisma:deploy": "prisma migrate deploy",
+    "prisma:seed": "prisma db seed",
     "db:seed:qa": "node scripts/seed-qa.cjs",
     "test:h10": "node --test test/h10-rules.test.cjs test/h10-integration.test.cjs",
     "db:seed:h10:qa": "node scripts/seed-h10-qa.cjs",
-    "test:h11": "node --test test/h11-rules.test.cjs test/h11-integration.test.cjs"
+    "test:h11": "node --test test/h11-rules.test.cjs test/h11-integration.test.cjs",
+    "test:h12": "node --test test/h12-integration.test.cjs",
+    "test:h13": "node --test test/h13-integration.test.cjs",
+    "db:seed:h13:qa": "node scripts/seed-h13-qa.cjs"
   },
   "dependencies": {
     "@nestjs/common": "^10.4.0",
