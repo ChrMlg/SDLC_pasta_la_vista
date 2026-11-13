@@ -282,3 +282,47 @@ El PR va hacia `develop`. La rama hereda H10-H12; revisar e integrar esas histor
 Vincular el PR a #44 desde Development y copiar su enlace a la card H13. Al consultar la issue, seguía asignada a DiegoJacob0: actualizar responsable y planificación según el reparto acordado por el equipo antes de presentarla como trabajo individual. Las casillas backend pueden marcarse con esta evidencia; frontend, despliegue compartido, aprobación y merge siguen pendientes. Poner la card en revisión si existe ese estado; en caso contrario mantener In progress. No marcar Done todavía.
 
 H13 se entrega sin commit ni push para que el responsable los realice. La pausa de esta entrega ocurre antes de H14.
+
+## H14 - Movimientos manuales de inventario
+
+Historia [#45](https://github.com/ChrMlg/SDLC_pasta_la_vista/issues/45). Rama `feature/H14-movimientos-inventario`, actualizada desde `develop` después de la corrección Docker `98dc732`. El flujo vigente es el arranque local con `npm start` descrito al inicio; esta historia no depende de una base remota.
+
+`POST /api/management/inventory/movements` recibe `{branchId,itemId,quantity,type,reason}`. Roles: MANAGER de la sucursal o GENERAL_MANAGER. Cantidad entera de 1 a 2147483647, tipo IN/OUT y motivo de 1 a 200 caracteres después de quitar espacios extremos. Se validan UUID y campos adicionales; el actor proviene de la sesión verificada.
+
+Devuelve 201 con `id`, `itemId`, `quantity`, `type`, `reason`, `createdById`, `createdAt`. Errores uniformes `{code,message,field}`: 400 por datos inválidos, stock insuficiente o desbordamiento; 401 sin sesión; 403 para roles no gerenciales; 404 por sucursal ajena o combinación insumo/sucursal inexistente. Se permite una salida que deje el stock exactamente en cero.
+
+El servicio bloquea el insumo antes de leer existencias. Una sola transacción actualiza stock, registra el movimiento y, si una entrada deja stock estrictamente mayor al mínimo, resuelve las alertas ACTIVE con fecha y usuario autenticado. Llegar exactamente al mínimo no resuelve la alerta. Dos salidas concurrentes no pueden gastar las mismas unidades; si falla un paso se revierte toda la operación.
+
+La migración `20261110010000_h14_inventory_movements` agrega InventoryMovement y la persistencia InventoryAlert necesaria para resolver alertas, con enums, claves foráneas, validaciones e índice parcial de una alerta ACTIVE por insumo. La generación y consulta de alertas corresponden a H15. No hay descuento automático por pedidos o recetas.
+
+### Datos y cuentas locales
+
+El arranque de Docker aplica las migraciones y completa los datos base H10/H13 de forma idempotente. Los datos ya existentes en el volumen se conservan, incluidas las cuentas y los movimientos. No se conecta ni escribe en Supabase.
+
+`prisma/project-data.cjs` y `seed-project.cjs` permiten provisionar el conjunto de demostración sobre esa misma base: tres sucursales originales (Centro, Norte y Jardín), 30 mesas, 15 insumos, ocho cuentas adicionales y tres reservas. El catálogo original de 18 platillos se conserva. Las capacidades y existencias anteriores no se reemplazan por valores de ejemplo. No se crea otra base.
+
+Los correos y contraseñas se leen de `.env.project.credentials`, privado e ignorado, con formato `{ "etiqueta": { "email": "...", "password": "..." } }`. El seed valida el archivo y falla ante cuentas incompatibles, sin sobrescribirlas. Las contraseñas se guardan como hash; el login consulta la base. Los clientes nuevos usan el registro público y no dependen de las cuentas de demostración.
+
+Con el stack iniciado y el backend compilado para herramientas del host:
+
+```bash
+node backend/scripts/project-db.cjs local seed
+node backend/scripts/export-team-access.cjs
+```
+
+El archivo `accesos-equipo-privado.txt` contiene seis cuentas internas y dos clientes de demostración opcionales. Está excluido de Git y de la imagen Docker. Los accesos existentes se verificaron en la base local sin cambiar contraseñas. El entorno Postman privado queda en `postman/.env.project.local`; no se publica. Computadoras distintas tienen volúmenes locales independientes: compartir configuración de cuentas no sincroniza datos entre equipos.
+
+### Pruebas y entrega H14
+
+Resultado del 2026-11-13: 21 pruebas H14 (20 escenarios y test padre), 25 unitarias, H10 28, H11 23, H12 18, H13 17 y 108 comprobaciones HTTP existentes aprobadas. Además, 30 comprobaciones contra la API real de Docker verifican el seed repetible, permisos, entrada y salida compensatoria, auditoría y saldo conservado. Las 14 migraciones locales están actualizadas y el diff Prisma no presenta diferencias.
+
+```bash
+node backend/scripts/run-qa.cjs npm run test:h14 --workspace backend
+node backend/test/project-smoke.cjs local --existing-api
+```
+
+La suite aislada crea y elimina solo sus propios fixtures. La comprobación con `--existing-api` usa el backend de Docker ya iniciado: registra IN 1 g y OUT 1 g de arroz, conserva ambos movimientos y no modifica el saldo final. Si se interrumpe entre ambos movimientos, revisar el historial antes de repetir.
+
+Colección `postman/H14-Inventory-Movements.postman_collection.json`: 28 solicitudes. Plantilla local sin secretos: `postman/H14-Local.postman_environment.json`; importar el entorno privado generado por el seed para ejecutarla. JSON y scripts validados. No se ejecutó Postman/Newman; la evidencia HTTP corresponde a las suites anteriores.
+
+Evidencia: [H14_RESULTS.txt](../docs/qa/H14_RESULTS.txt). Entrega y PR: [H14_ENTREGA.md](../docs/qa/H14_ENTREGA.md). H14 se sube en su propia rama, con PR hacia develop y revisión de otro integrante. No se fusiona H14 automáticamente. Pausa antes de H15.
