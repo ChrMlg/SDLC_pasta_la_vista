@@ -41,6 +41,9 @@ model Branch {
   bills Bill[]
   receipts Receipt[]
   receiptCounter ReceiptCounter?
+  openingTime String @default("12:00") @db.Char(5)
+  closingTime String @default("22:00") @db.Char(5)
+  reservations Reservation[]
 }
 
 model User {
@@ -67,6 +70,7 @@ model User {
   updatedAt DateTime @default(now()) @updatedAt
   linkCodesCreated OrderLinkCode[]
   clientBills Bill[] @relation("BillClient")
+  reservations Reservation[]
 }
 
 model AuthSession {
@@ -171,6 +175,8 @@ model Table {
   orders      Order[]
   assignments TableAssignment[]
   bills Bill[]
+  capacity Int?
+  reservations Reservation[]
 
   @@unique([branchId, number])
   @@index([branchId, status])
@@ -327,4 +333,31 @@ model OrderLinkCode {
   createdAt DateTime @default(now())
 
   @@index([orderId, expiresAt])
+}
+
+enum ReservationStatus {
+  PENDING
+  CONFIRMED
+  CANCELLED
+}
+
+model Reservation {
+  id String @id @default(uuid()) @db.Uuid
+  branchId String @db.Uuid
+  branch Branch @relation(fields: [branchId], references: [id], onDelete: Restrict)
+  tableId String @db.Uuid
+  table Table @relation(fields: [tableId], references: [id], onDelete: Restrict)
+  customerId String @db.Uuid
+  customer User @relation(fields: [customerId], references: [id], onDelete: Restrict)
+  date String @db.Char(10)
+  startTime String @db.Char(5)
+  endTime String @db.Char(5)
+  partySize Int
+  status ReservationStatus @default(CONFIRMED)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([tableId, date, status])
+  @@index([branchId, date])
+  @@index([customerId, date])
 }

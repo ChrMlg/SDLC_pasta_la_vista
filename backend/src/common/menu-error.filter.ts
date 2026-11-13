@@ -5,13 +5,14 @@ import { OrderError } from '../orders/orders.service';
 import { BillingError } from '../billing/billing.service';
 import { NotificationError } from '../notifications/notifications.service';
 import { AuthError } from '../auth/auth.service';
+import { BusinessError } from './business-error';
 
 @Catch()
 export class ApiErrorFilter implements ExceptionFilter {
   private readonly logger = new Logger(ApiErrorFilter.name);
   catch(error: unknown, host: ArgumentsHost) {
     const response = host.switchToHttp().getResponse<Response>();
-    if (error instanceof MenuError || error instanceof OrderError || error instanceof BillingError || error instanceof NotificationError || error instanceof AuthError) {
+    if (error instanceof MenuError || error instanceof OrderError || error instanceof BillingError || error instanceof NotificationError || error instanceof AuthError || error instanceof BusinessError) {
       response.status(error.status).json({ code: error.code, message: error.message, field: error.field });
       return;
     }

@@ -1,0 +1,931 @@
+{
+  "info": {
+    "name": "H11 - Ocupación y cancelación gerencial (#42)",
+    "description": "Ejecutar en PostgreSQL local de QA con el entorno privado generado por db:seed:h10:qa. Reutiliza usuarios y mesas H10. Crear y cancelar una reserva futura. El límite exacto de 2 horas, aislamiento de sucursales y concurrencia se comprueban con test:h11. No ejecutar sobre datos de producción.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "item": [
+    {
+      "name": "H11 - Ocupación sin sesión",
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "url": "{{baseUrl}}/management/branches/{{branchId}}/occupancy?date={{reservationDate}}"
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('HTTP 401', () => pm.response.to.have.status(401));",
+              "pm.test('Error uniforme', () => pm.expect(pm.response.json()).to.have.all.keys('code', 'message', 'field'));"
+            ]
+          }
+        }
+      ],
+      "protocolProfileBehavior": {
+        "disableCookies": true
+      }
+    },
+    {
+      "name": "H11 - Cancelación sin sesión",
+      "request": {
+        "method": "PUT",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "url": "{{baseUrl}}/reservations/{{missingBranchId}}/cancel"
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('HTTP 401', () => pm.response.to.have.status(401));",
+              "pm.test('Error uniforme', () => pm.expect(pm.response.json()).to.have.all.keys('code', 'message', 'field'));"
+            ]
+          }
+        }
+      ],
+      "protocolProfileBehavior": {
+        "disableCookies": true
+      }
+    },
+    {
+      "name": "H11 - Inicio de sesión customer",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "url": "{{baseUrl}}/auth/login",
+        "body": {
+          "mode": "raw",
+          "raw": "{\"email\": \"{{customerEmail}}\", \"password\": \"{{customerPassword}}\"}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('HTTP 200', () => pm.response.to.have.status(200));",
+              "if (pm.response.code === 200) { const cookie = pm.response.headers.get('set-cookie'); pm.test('Cookie de sesión', () => pm.expect(cookie).to.include('HttpOnly')); pm.environment.set('customerCookie', cookie.split(';')[0]); }"
+            ]
+          }
+        }
+      ],
+      "protocolProfileBehavior": {
+        "disableCookies": true
+      }
+    },
+    {
+      "name": "H11 - Inicio de sesión manager",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "url": "{{baseUrl}}/auth/login",
+        "body": {
+          "mode": "raw",
+          "raw": "{\"email\": \"{{managerEmail}}\", \"password\": \"{{managerPassword}}\"}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('HTTP 200', () => pm.response.to.have.status(200));",
+              "if (pm.response.code === 200) { const cookie = pm.response.headers.get('set-cookie'); pm.test('Cookie de sesión', () => pm.expect(cookie).to.include('HttpOnly')); pm.environment.set('managerCookie', cookie.split(';')[0]); }"
+            ]
+          }
+        }
+      ],
+      "protocolProfileBehavior": {
+        "disableCookies": true
+      }
+    },
+    {
+      "name": "H11 - Inicio de sesión waiter",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "url": "{{baseUrl}}/auth/login",
+        "body": {
+          "mode": "raw",
+          "raw": "{\"email\": \"{{waiterEmail}}\", \"password\": \"{{waiterPassword}}\"}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('HTTP 200', () => pm.response.to.have.status(200));",
+              "if (pm.response.code === 200) { const cookie = pm.response.headers.get('set-cookie'); pm.test('Cookie de sesión', () => pm.expect(cookie).to.include('HttpOnly')); pm.environment.set('waiterCookie', cookie.split(';')[0]); }"
+            ]
+          }
+        }
+      ],
+      "protocolProfileBehavior": {
+        "disableCookies": true
+      }
+    },
+    {
+      "name": "H11 - Inicio de sesión kitchen",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "url": "{{baseUrl}}/auth/login",
+        "body": {
+          "mode": "raw",
+          "raw": "{\"email\": \"{{kitchenEmail}}\", \"password\": \"{{kitchenPassword}}\"}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('HTTP 200', () => pm.response.to.have.status(200));",
+              "if (pm.response.code === 200) { const cookie = pm.response.headers.get('set-cookie'); pm.test('Cookie de sesión', () => pm.expect(cookie).to.include('HttpOnly')); pm.environment.set('kitchenCookie', cookie.split(';')[0]); }"
+            ]
+          }
+        }
+      ],
+      "protocolProfileBehavior": {
+        "disableCookies": true
+      }
+    },
+    {
+      "name": "H11 - Inicio de sesión general",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "url": "{{baseUrl}}/auth/login",
+        "body": {
+          "mode": "raw",
+          "raw": "{\"email\": \"{{generalEmail}}\", \"password\": \"{{generalPassword}}\"}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('HTTP 200', () => pm.response.to.have.status(200));",
+              "if (pm.response.code === 200) { const cookie = pm.response.headers.get('set-cookie'); pm.test('Cookie de sesión', () => pm.expect(cookie).to.include('HttpOnly')); pm.environment.set('generalCookie', cookie.split(';')[0]); }"
+            ]
+          }
+        }
+      ],
+      "protocolProfileBehavior": {
+        "disableCookies": true
+      }
+    },
+    {
+      "name": "H11 - Ocupación del gerente",
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          },
+          {
+            "key": "Cookie",
+            "value": "{{managerCookie}}"
+          }
+        ],
+        "url": "{{baseUrl}}/management/branches/{{branchId}}/occupancy?date={{reservationDate}}"
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('HTTP 200', () => pm.response.to.have.status(200));",
+              "pm.test('Sucursal y zona horaria', () => { const r = pm.response.json(); pm.expect(r.branchId).to.eql(pm.environment.get('branchId')); pm.expect(r.timeZone).to.eql('America/El_Salvador'); });",
+              "pm.test('Ocupación por mesas distintas', () => { const r = pm.response.json(); pm.expect(r.totalTables).to.be.above(0); r.slots.forEach(s => { pm.expect(s.occupancyPercentage).to.eql(Math.round(s.reservedTables / r.totalTables * 10000) / 100); pm.expect(s.availableTables).to.eql(r.totalTables - s.reservedTables); }); });"
+            ]
+          }
+        }
+      ],
+      "protocolProfileBehavior": {
+        "disableCookies": true
+      }
+    },
+    {
+      "name": "H11 - Ocupación de gerencia general",
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          },
+          {
+            "key": "Cookie",
+            "value": "{{generalCookie}}"
+          }
+        ],
+        "url": "{{baseUrl}}/management/branches/{{branchId}}/occupancy?date={{reservationDate}}"
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('HTTP 200', () => pm.response.to.have.status(200));",
+              "pm.test('Sucursal y zona horaria', () => { const r = pm.response.json(); pm.expect(r.branchId).to.eql(pm.environment.get('branchId')); pm.expect(r.timeZone).to.eql('America/El_Salvador'); });",
+              "pm.test('Ocupación por mesas distintas', () => { const r = pm.response.json(); pm.expect(r.totalTables).to.be.above(0); r.slots.forEach(s => { pm.expect(s.occupancyPercentage).to.eql(Math.round(s.reservedTables / r.totalTables * 10000) / 100); pm.expect(s.availableTables).to.eql(r.totalTables - s.reservedTables); }); });"
+            ]
+          }
+        }
+      ],
+      "protocolProfileBehavior": {
+        "disableCookies": true
+      }
+    },
+    {
+      "name": "H11 - Ocupación prohibida a customer",
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          },
+          {
+            "key": "Cookie",
+            "value": "{{customerCookie}}"
+          }
+        ],
+        "url": "{{baseUrl}}/management/branches/{{branchId}}/occupancy?date={{reservationDate}}"
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('HTTP 403', () => pm.response.to.have.status(403));",
+              "pm.test('Error uniforme', () => pm.expect(pm.response.json()).to.have.all.keys('code', 'message', 'field'));"
+            ]
+          }
+        }
+      ],
+      "protocolProfileBehavior": {
+        "disableCookies": true
+      }
+    },
+    {
+      "name": "H11 - Cancelación prohibida a customer",
+      "request": {
+        "method": "PUT",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          },
+          {
+            "key": "Cookie",
+            "value": "{{customerCookie}}"
+          }
+        ],
+        "url": "{{baseUrl}}/reservations/{{missingBranchId}}/cancel"
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('HTTP 403', () => pm.response.to.have.status(403));",
+              "pm.test('Error uniforme', () => pm.expect(pm.response.json()).to.have.all.keys('code', 'message', 'field'));"
+            ]
+          }
+        }
+      ],
+      "protocolProfileBehavior": {
+        "disableCookies": true
+      }
+    },
+    {
+      "name": "H11 - Ocupación prohibida a waiter",
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          },
+          {
+            "key": "Cookie",
+            "value": "{{waiterCookie}}"
+          }
+        ],
+        "url": "{{baseUrl}}/management/branches/{{branchId}}/occupancy?date={{reservationDate}}"
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('HTTP 403', () => pm.response.to.have.status(403));",
+              "pm.test('Error uniforme', () => pm.expect(pm.response.json()).to.have.all.keys('code', 'message', 'field'));"
+            ]
+          }
+        }
+      ],
+      "protocolProfileBehavior": {
+        "disableCookies": true
+      }
+    },
+    {
+      "name": "H11 - Cancelación prohibida a waiter",
+      "request": {
+        "method": "PUT",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          },
+          {
+            "key": "Cookie",
+            "value": "{{waiterCookie}}"
+          }
+        ],
+        "url": "{{baseUrl}}/reservations/{{missingBranchId}}/cancel"
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('HTTP 403', () => pm.response.to.have.status(403));",
+              "pm.test('Error uniforme', () => pm.expect(pm.response.json()).to.have.all.keys('code', 'message', 'field'));"
+            ]
+          }
+        }
+      ],
+      "protocolProfileBehavior": {
+        "disableCookies": true
+      }
+    },
+    {
+      "name": "H11 - Ocupación prohibida a kitchen",
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          },
+          {
+            "key": "Cookie",
+            "value": "{{kitchenCookie}}"
+          }
+        ],
+        "url": "{{baseUrl}}/management/branches/{{branchId}}/occupancy?date={{reservationDate}}"
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('HTTP 403', () => pm.response.to.have.status(403));",
+              "pm.test('Error uniforme', () => pm.expect(pm.response.json()).to.have.all.keys('code', 'message', 'field'));"
+            ]
+          }
+        }
+      ],
+      "protocolProfileBehavior": {
+        "disableCookies": true
+      }
+    },
+    {
+      "name": "H11 - Cancelación prohibida a kitchen",
+      "request": {
+        "method": "PUT",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          },
+          {
+            "key": "Cookie",
+            "value": "{{kitchenCookie}}"
+          }
+        ],
+        "url": "{{baseUrl}}/reservations/{{missingBranchId}}/cancel"
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('HTTP 403', () => pm.response.to.have.status(403));",
+              "pm.test('Error uniforme', () => pm.expect(pm.response.json()).to.have.all.keys('code', 'message', 'field'));"
+            ]
+          }
+        }
+      ],
+      "protocolProfileBehavior": {
+        "disableCookies": true
+      }
+    },
+    {
+      "name": "H11 - Fecha inválida",
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          },
+          {
+            "key": "Cookie",
+            "value": "{{managerCookie}}"
+          }
+        ],
+        "url": "{{baseUrl}}/management/branches/{{branchId}}/occupancy?date=2031-02-29"
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('HTTP 400', () => pm.response.to.have.status(400));",
+              "pm.test('Error uniforme', () => pm.expect(pm.response.json()).to.have.all.keys('code', 'message', 'field'));"
+            ]
+          }
+        }
+      ],
+      "protocolProfileBehavior": {
+        "disableCookies": true
+      }
+    },
+    {
+      "name": "H11 - Filtro no permitido",
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          },
+          {
+            "key": "Cookie",
+            "value": "{{managerCookie}}"
+          }
+        ],
+        "url": "{{baseUrl}}/management/branches/{{branchId}}/occupancy?date={{reservationDate}}&customerId=otro"
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('HTTP 400', () => pm.response.to.have.status(400));",
+              "pm.test('Error uniforme', () => pm.expect(pm.response.json()).to.have.all.keys('code', 'message', 'field'));"
+            ]
+          }
+        }
+      ],
+      "protocolProfileBehavior": {
+        "disableCookies": true
+      }
+    },
+    {
+      "name": "H11 - Sucursal inexistente",
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          },
+          {
+            "key": "Cookie",
+            "value": "{{generalCookie}}"
+          }
+        ],
+        "url": "{{baseUrl}}/management/branches/{{missingBranchId}}/occupancy?date={{reservationDate}}"
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('HTTP 404', () => pm.response.to.have.status(404));",
+              "pm.test('Error uniforme', () => pm.expect(pm.response.json()).to.have.all.keys('code', 'message', 'field'));"
+            ]
+          }
+        }
+      ],
+      "protocolProfileBehavior": {
+        "disableCookies": true
+      }
+    },
+    {
+      "name": "H11 - Reservación inexistente",
+      "request": {
+        "method": "PUT",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          },
+          {
+            "key": "Cookie",
+            "value": "{{generalCookie}}"
+          }
+        ],
+        "url": "{{baseUrl}}/reservations/{{missingBranchId}}/cancel"
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('HTTP 404', () => pm.response.to.have.status(404));",
+              "pm.test('Error uniforme', () => pm.expect(pm.response.json()).to.have.all.keys('code', 'message', 'field'));"
+            ]
+          }
+        }
+      ],
+      "protocolProfileBehavior": {
+        "disableCookies": true
+      }
+    },
+    {
+      "name": "H11 - Identificador inválido",
+      "request": {
+        "method": "PUT",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          },
+          {
+            "key": "Cookie",
+            "value": "{{managerCookie}}"
+          }
+        ],
+        "url": "{{baseUrl}}/reservations/invalid/cancel"
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('HTTP 400', () => pm.response.to.have.status(400));",
+              "pm.test('Error uniforme', () => pm.expect(pm.response.json()).to.have.all.keys('code', 'message', 'field'));"
+            ]
+          }
+        }
+      ],
+      "protocolProfileBehavior": {
+        "disableCookies": true
+      }
+    },
+    {
+      "name": "H11 - Crear reserva mediante H10",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          },
+          {
+            "key": "Cookie",
+            "value": "{{customerCookie}}"
+          }
+        ],
+        "url": "{{baseUrl}}/reservations",
+        "body": {
+          "mode": "raw",
+          "raw": "{\"branchId\": \"{{branchId}}\", \"date\": \"{{reservationDate}}\", \"time\": \"12:00\", \"partySize\": 2}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('HTTP 201', () => pm.response.to.have.status(201));",
+              "if (pm.response.code === 201) pm.environment.set('h11ReservationId', pm.response.json().id);"
+            ]
+          }
+        }
+      ],
+      "protocolProfileBehavior": {
+        "disableCookies": true
+      }
+    },
+    {
+      "name": "H11 - No aceptar estado enviado por el cliente",
+      "request": {
+        "method": "PUT",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          },
+          {
+            "key": "Cookie",
+            "value": "{{managerCookie}}"
+          }
+        ],
+        "url": "{{baseUrl}}/reservations/{{h11ReservationId}}/cancel",
+        "body": {
+          "mode": "raw",
+          "raw": "{\"status\": \"CANCELLED\"}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('HTTP 400', () => pm.response.to.have.status(400));",
+              "pm.test('Error uniforme', () => pm.expect(pm.response.json()).to.have.all.keys('code', 'message', 'field'));"
+            ]
+          }
+        }
+      ],
+      "protocolProfileBehavior": {
+        "disableCookies": true
+      }
+    },
+    {
+      "name": "H11 - Ver reserva en la ocupación",
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          },
+          {
+            "key": "Cookie",
+            "value": "{{managerCookie}}"
+          }
+        ],
+        "url": "{{baseUrl}}/management/branches/{{branchId}}/occupancy?date={{reservationDate}}"
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('HTTP 200', () => pm.response.to.have.status(200));",
+              "pm.test('Reserva registrada', () => pm.expect(pm.response.json().reservations.some(r => r.id === pm.environment.get('h11ReservationId') && r.status === 'CONFIRMED')).to.eql(true));"
+            ]
+          }
+        }
+      ],
+      "protocolProfileBehavior": {
+        "disableCookies": true
+      }
+    },
+    {
+      "name": "H11 - Cancelar reserva desde gerencia",
+      "request": {
+        "method": "PUT",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          },
+          {
+            "key": "Cookie",
+            "value": "{{managerCookie}}"
+          }
+        ],
+        "url": "{{baseUrl}}/reservations/{{h11ReservationId}}/cancel",
+        "body": {
+          "mode": "raw",
+          "raw": "{}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('HTTP 200', () => pm.response.to.have.status(200));",
+              "pm.test('Cancelada', () => pm.expect(pm.response.json().status).to.eql('CANCELLED'));"
+            ]
+          }
+        }
+      ],
+      "protocolProfileBehavior": {
+        "disableCookies": true
+      }
+    },
+    {
+      "name": "H11 - Rechazar segunda cancelación",
+      "request": {
+        "method": "PUT",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          },
+          {
+            "key": "Cookie",
+            "value": "{{managerCookie}}"
+          }
+        ],
+        "url": "{{baseUrl}}/reservations/{{h11ReservationId}}/cancel",
+        "body": {
+          "mode": "raw",
+          "raw": "{}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('HTTP 400', () => pm.response.to.have.status(400));",
+              "pm.test('Error uniforme', () => pm.expect(pm.response.json()).to.have.all.keys('code', 'message', 'field'));",
+              "pm.test('Ya cancelada', () => pm.expect(pm.response.json().code).to.eql('RESERVATION_ALREADY_CANCELLED'));"
+            ]
+          }
+        }
+      ],
+      "protocolProfileBehavior": {
+        "disableCookies": true
+      }
+    },
+    {
+      "name": "H11 - Ocupación después de cancelar",
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          },
+          {
+            "key": "Cookie",
+            "value": "{{managerCookie}}"
+          }
+        ],
+        "url": "{{baseUrl}}/management/branches/{{branchId}}/occupancy?date={{reservationDate}}"
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('HTTP 200', () => pm.response.to.have.status(200));",
+              "pm.test('Sucursal y zona horaria', () => { const r = pm.response.json(); pm.expect(r.branchId).to.eql(pm.environment.get('branchId')); pm.expect(r.timeZone).to.eql('America/El_Salvador'); });",
+              "pm.test('Ocupación por mesas distintas', () => { const r = pm.response.json(); pm.expect(r.totalTables).to.be.above(0); r.slots.forEach(s => { pm.expect(s.occupancyPercentage).to.eql(Math.round(s.reservedTables / r.totalTables * 10000) / 100); pm.expect(s.availableTables).to.eql(r.totalTables - s.reservedTables); }); });",
+              "pm.test('Reserva cancelada en el listado', () => pm.expect(pm.response.json().reservations.some(r => r.id === pm.environment.get('h11ReservationId') && r.status === 'CANCELLED')).to.eql(true));"
+            ]
+          }
+        }
+      ],
+      "protocolProfileBehavior": {
+        "disableCookies": true
+      }
+    },
+    {
+      "name": "H11 - Notificación al cliente",
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          },
+          {
+            "key": "Cookie",
+            "value": "{{customerCookie}}"
+          }
+        ],
+        "url": "{{baseUrl}}/notifications?sourceModule=RESERVATIONS"
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('HTTP 200', () => pm.response.to.have.status(200));",
+              "pm.test('Aviso de cancelación', () => pm.expect(pm.response.json().data.some(n => n.relatedEntityId === pm.environment.get('h11ReservationId') && n.title === 'Reservación cancelada')).to.eql(true));"
+            ]
+          }
+        }
+      ],
+      "protocolProfileBehavior": {
+        "disableCookies": true
+      }
+    }
+  ]
+}

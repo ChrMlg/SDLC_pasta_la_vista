@@ -6,7 +6,7 @@ node_modules
 .git
 .agents
 .aws
-.codex
+.*/
 *.log
 *Zone.Identifier
 
