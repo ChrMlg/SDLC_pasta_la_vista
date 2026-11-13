@@ -6,6 +6,9 @@
     "frontend"
   ],
   "scripts": {
+    "start": "node backend/scripts/local-stack.cjs start",
+    "stop": "node backend/scripts/local-stack.cjs stop",
+    "logs": "node backend/scripts/local-stack.cjs logs",
     "test": "node backend/test/menu.test.ts && node backend/test/orders.test.ts && node backend/test/order-transition.test.ts && node backend/test/billing-math.test.ts && node backend/test/auth-credentials.test.ts && node frontend/test/menu-form.test.ts && node frontend/test/menu-handoff.test.ts && node frontend/test/seat-navigation.test.ts",
     "typecheck": "npm run typecheck --workspaces",
     "build": "npm run build --workspaces"

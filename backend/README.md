@@ -1,5 +1,27 @@
 # SDLC backend
 
+## Arranque vigente: Docker Compose local (2026-11-13)
+
+Después de integrar H10–H13 se completó el arranque exigido por la sección 2.1.2 de la especificación de cátedra: backend NestJS y PostgreSQL 16 local mediante Docker Compose, con Prisma. Supabase no es una dependencia del funcionamiento actual.
+
+Con Docker iniciado y Node 22 o superior, desde la raíz:
+
+```bash
+npm start
+```
+
+El comando prepara la configuración privada si la instalación es nueva, construye el Dockerfile del backend, inicia PostgreSQL, espera su healthcheck, aplica migraciones pendientes, completa mesas/capacidades e insumos base sin restablecer registros existentes y arranca NestJS. Finalmente espera que la API esté saludable. Solo levanta `db` y `backend`; el frontend pertenece a un perfil opcional y no se publica ninguna web.
+
+API: `http://127.0.0.1:3000/api`; health: `/api/health`. `npm stop` detiene ambos contenedores sin borrar el volumen; `npm run logs` muestra el backend. Los puertos son configurables en `.env.compose.local` y se publican solo en 127.0.0.1. También puede usarse directamente `docker compose --env-file .env.compose.local up -d --build --wait db backend` después de preparar el archivo privado.
+
+Se conserva el nombre de proyecto Compose `sdlc-h10` para reutilizar `sdlc-h10_postgres_data`, con las credenciales y el nombre de base que ya tiene este equipo. No se crea una base por historia ni se renombra el volumen. En una instalación realmente nueva se genera una contraseña aleatoria; si existe el volumen pero falta su configuración, se detiene la preparación para no inventar credenciales incompatibles.
+
+La conexión activa de `backend/.env` apunta ahora al PostgreSQL local. Antes de cambiarla se conserva una copia privada de la configuración previa en `backend/.env.previous-*`; esto no copia ni elimina bases. Docker utiliza la conexión al servicio `db`, no ese archivo del host. Los datos remotos previos se conservan sin nuevas escrituras. El archivo de accesos del equipo y los archivos `.env` quedan excluidos de Git y de la imagen Docker.
+
+La inicialización automática crea únicamente datos base faltantes de H10/H13. Conserva mesas ocupadas, capacidades ya configuradas y existencias. No resetea movimientos, cuentas ni reservas. Las cuentas de equipo se provisionan con secretos privados; no se introducen contraseñas de login en este cambio.
+
+Detalle del arreglo posterior a los merges: [CORRECCION_H10_H13_DOCKER.md](../docs/qa/CORRECCION_H10_H13_DOCKER.md). Las secciones siguientes conservan la explicación funcional y evidencia histórica de cada historia; sus instrucciones de PR anteriores al merge ya fueron superadas por la integración en develop.
+
 ## H10 - Table reservations
 
 Story: [H10 / issue #41](https://github.com/ChrMlg/SDLC_pasta_la_vista/issues/41).

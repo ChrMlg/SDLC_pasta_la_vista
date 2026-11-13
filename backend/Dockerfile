@@ -21,4 +21,4 @@ COPY --from=build /app/node_modules /app/node_modules
 COPY --from=build /app/backend/dist dist
 COPY --from=build /app/backend/prisma prisma
 EXPOSE 3000
-CMD ["sh", "-c", "../node_modules/.bin/prisma migrate deploy --schema prisma/schema.prisma && node dist/main.js"]
+CMD ["sh", "-c", "../node_modules/.bin/prisma migrate deploy --schema prisma/schema.prisma && node prisma/bootstrap.cjs && exec node dist/main.js"]
