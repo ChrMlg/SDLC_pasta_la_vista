@@ -2,6 +2,7 @@
   "name": "@bistro/backend",
   "private": true,
   "scripts": {
+    "prestart": "npm run prisma:generate && npm run build",
     "start": "node --env-file-if-exists=.env dist/main.js",
     "build": "tsc -p tsconfig.json",
     "typecheck": "tsc --noEmit -p tsconfig.json",
@@ -20,7 +21,10 @@
     "test:h11": "node --test test/h11-rules.test.cjs test/h11-integration.test.cjs",
     "test:h12": "node --test test/h12-integration.test.cjs",
     "test:h13": "node --test test/h13-integration.test.cjs",
-    "db:seed:h13:qa": "node scripts/seed-h13-qa.cjs"
+    "db:seed:h13:qa": "node scripts/seed-h13-qa.cjs",
+    "test:h14": "node --test test/h14-integration.test.cjs",
+    "test:h15": "node --test test/h15-integration.test.cjs",
+    "db:project": "node scripts/project-db.cjs"
   },
   "dependencies": {
     "@nestjs/common": "^10.4.0",

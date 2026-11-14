@@ -1,0 +1,1148 @@
+{
+  "info": {
+    "name": "H14 - Movimientos de inventario (#45)",
+    "description": "Usa los datos persistentes del proyecto y el entorno privado local con Docker. Ejecutar en orden: registra IN 1 g y OUT 1 g de arroz, conserva ambas auditorías y comprueba el saldo original. Si se interrumpe después de IN, revisar el historial antes de repetir. Concurrencia, rollback y resolución de alertas se verifican en test:h14.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "item": [
+    {
+      "name": "H14 - Sin sesión",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "url": "{{baseUrl}}/management/inventory/movements",
+        "body": {
+          "mode": "raw",
+          "raw": "{\"branchId\": \"{{branchId}}\", \"itemId\": \"{{itemId}}\", \"quantity\": 1, \"type\": \"IN\", \"reason\": \"Verificación H14: entrada de 1 g de arroz\"}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('HTTP 401', () => pm.response.to.have.status(401));",
+              "pm.test('Error uniforme', () => pm.expect(pm.response.json()).to.have.all.keys('code','message','field'));"
+            ]
+          }
+        }
+      ],
+      "protocolProfileBehavior": {
+        "disableCookies": true
+      }
+    },
+    {
+      "name": "H14 - Inicio de sesión customer",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "url": "{{baseUrl}}/auth/login",
+        "body": {
+          "mode": "raw",
+          "raw": "{\"email\": \"{{customerEmail}}\", \"password\": \"{{customerPassword}}\"}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        }
+      },
+      "event": [
+        {
+          "listen": "prerequest",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.environment.unset('customerCookie');"
+            ]
+          }
+        },
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('HTTP 200', () => pm.response.to.have.status(200));",
+              "if (pm.response.code === 200) { const cookie=pm.response.headers.get('set-cookie'); pm.test('Cookie de sesión', () => pm.expect(cookie).to.include('HttpOnly')); pm.environment.set('customerCookie',cookie.split(';')[0]); }"
+            ]
+          }
+        }
+      ],
+      "protocolProfileBehavior": {
+        "disableCookies": true
+      }
+    },
+    {
+      "name": "H14 - Inicio de sesión waiter",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "url": "{{baseUrl}}/auth/login",
+        "body": {
+          "mode": "raw",
+          "raw": "{\"email\": \"{{waiterEmail}}\", \"password\": \"{{waiterPassword}}\"}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        }
+      },
+      "event": [
+        {
+          "listen": "prerequest",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.environment.unset('waiterCookie');"
+            ]
+          }
+        },
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('HTTP 200', () => pm.response.to.have.status(200));",
+              "if (pm.response.code === 200) { const cookie=pm.response.headers.get('set-cookie'); pm.test('Cookie de sesión', () => pm.expect(cookie).to.include('HttpOnly')); pm.environment.set('waiterCookie',cookie.split(';')[0]); }"
+            ]
+          }
+        }
+      ],
+      "protocolProfileBehavior": {
+        "disableCookies": true
+      }
+    },
+    {
+      "name": "H14 - Inicio de sesión kitchen",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "url": "{{baseUrl}}/auth/login",
+        "body": {
+          "mode": "raw",
+          "raw": "{\"email\": \"{{kitchenEmail}}\", \"password\": \"{{kitchenPassword}}\"}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        }
+      },
+      "event": [
+        {
+          "listen": "prerequest",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.environment.unset('kitchenCookie');"
+            ]
+          }
+        },
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('HTTP 200', () => pm.response.to.have.status(200));",
+              "if (pm.response.code === 200) { const cookie=pm.response.headers.get('set-cookie'); pm.test('Cookie de sesión', () => pm.expect(cookie).to.include('HttpOnly')); pm.environment.set('kitchenCookie',cookie.split(';')[0]); }"
+            ]
+          }
+        }
+      ],
+      "protocolProfileBehavior": {
+        "disableCookies": true
+      }
+    },
+    {
+      "name": "H14 - Inicio de sesión manager",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "url": "{{baseUrl}}/auth/login",
+        "body": {
+          "mode": "raw",
+          "raw": "{\"email\": \"{{managerEmail}}\", \"password\": \"{{managerPassword}}\"}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        }
+      },
+      "event": [
+        {
+          "listen": "prerequest",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.environment.unset('managerCookie');"
+            ]
+          }
+        },
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('HTTP 200', () => pm.response.to.have.status(200));",
+              "if (pm.response.code === 200) { const cookie=pm.response.headers.get('set-cookie'); pm.test('Cookie de sesión', () => pm.expect(cookie).to.include('HttpOnly')); pm.environment.set('managerCookie',cookie.split(';')[0]); }"
+            ]
+          }
+        }
+      ],
+      "protocolProfileBehavior": {
+        "disableCookies": true
+      }
+    },
+    {
+      "name": "H14 - Inicio de sesión otherManager",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "url": "{{baseUrl}}/auth/login",
+        "body": {
+          "mode": "raw",
+          "raw": "{\"email\": \"{{otherManagerEmail}}\", \"password\": \"{{otherManagerPassword}}\"}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        }
+      },
+      "event": [
+        {
+          "listen": "prerequest",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.environment.unset('otherManagerCookie');"
+            ]
+          }
+        },
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('HTTP 200', () => pm.response.to.have.status(200));",
+              "if (pm.response.code === 200) { const cookie=pm.response.headers.get('set-cookie'); pm.test('Cookie de sesión', () => pm.expect(cookie).to.include('HttpOnly')); pm.environment.set('otherManagerCookie',cookie.split(';')[0]); }"
+            ]
+          }
+        }
+      ],
+      "protocolProfileBehavior": {
+        "disableCookies": true
+      }
+    },
+    {
+      "name": "H14 - Inicio de sesión general",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "url": "{{baseUrl}}/auth/login",
+        "body": {
+          "mode": "raw",
+          "raw": "{\"email\": \"{{generalEmail}}\", \"password\": \"{{generalPassword}}\"}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        }
+      },
+      "event": [
+        {
+          "listen": "prerequest",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.environment.unset('generalCookie');"
+            ]
+          }
+        },
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('HTTP 200', () => pm.response.to.have.status(200));",
+              "if (pm.response.code === 200) { const cookie=pm.response.headers.get('set-cookie'); pm.test('Cookie de sesión', () => pm.expect(cookie).to.include('HttpOnly')); pm.environment.set('generalCookie',cookie.split(';')[0]); }"
+            ]
+          }
+        }
+      ],
+      "protocolProfileBehavior": {
+        "disableCookies": true
+      }
+    },
+    {
+      "name": "H14 - Rol customer prohibido",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          },
+          {
+            "key": "Cookie",
+            "value": "{{customerCookie}}"
+          }
+        ],
+        "url": "{{baseUrl}}/management/inventory/movements",
+        "body": {
+          "mode": "raw",
+          "raw": "{\"branchId\": \"{{branchId}}\", \"itemId\": \"{{itemId}}\", \"quantity\": 1, \"type\": \"IN\", \"reason\": \"Verificación H14: entrada de 1 g de arroz\"}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('HTTP 403', () => pm.response.to.have.status(403));",
+              "pm.test('Error uniforme', () => pm.expect(pm.response.json()).to.have.all.keys('code','message','field'));"
+            ]
+          }
+        }
+      ],
+      "protocolProfileBehavior": {
+        "disableCookies": true
+      }
+    },
+    {
+      "name": "H14 - Rol waiter prohibido",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          },
+          {
+            "key": "Cookie",
+            "value": "{{waiterCookie}}"
+          }
+        ],
+        "url": "{{baseUrl}}/management/inventory/movements",
+        "body": {
+          "mode": "raw",
+          "raw": "{\"branchId\": \"{{branchId}}\", \"itemId\": \"{{itemId}}\", \"quantity\": 1, \"type\": \"IN\", \"reason\": \"Verificación H14: entrada de 1 g de arroz\"}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('HTTP 403', () => pm.response.to.have.status(403));",
+              "pm.test('Error uniforme', () => pm.expect(pm.response.json()).to.have.all.keys('code','message','field'));"
+            ]
+          }
+        }
+      ],
+      "protocolProfileBehavior": {
+        "disableCookies": true
+      }
+    },
+    {
+      "name": "H14 - Rol kitchen prohibido",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          },
+          {
+            "key": "Cookie",
+            "value": "{{kitchenCookie}}"
+          }
+        ],
+        "url": "{{baseUrl}}/management/inventory/movements",
+        "body": {
+          "mode": "raw",
+          "raw": "{\"branchId\": \"{{branchId}}\", \"itemId\": \"{{itemId}}\", \"quantity\": 1, \"type\": \"IN\", \"reason\": \"Verificación H14: entrada de 1 g de arroz\"}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('HTTP 403', () => pm.response.to.have.status(403));",
+              "pm.test('Error uniforme', () => pm.expect(pm.response.json()).to.have.all.keys('code','message','field'));"
+            ]
+          }
+        }
+      ],
+      "protocolProfileBehavior": {
+        "disableCookies": true
+      }
+    },
+    {
+      "name": "H14 - Gerente de otra sucursal",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          },
+          {
+            "key": "Cookie",
+            "value": "{{otherManagerCookie}}"
+          }
+        ],
+        "url": "{{baseUrl}}/management/inventory/movements",
+        "body": {
+          "mode": "raw",
+          "raw": "{\"branchId\": \"{{branchId}}\", \"itemId\": \"{{itemId}}\", \"quantity\": 1, \"type\": \"IN\", \"reason\": \"Verificación H14: entrada de 1 g de arroz\"}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('HTTP 404', () => pm.response.to.have.status(404));",
+              "pm.test('Error uniforme', () => pm.expect(pm.response.json()).to.have.all.keys('code','message','field'));"
+            ]
+          }
+        }
+      ],
+      "protocolProfileBehavior": {
+        "disableCookies": true
+      }
+    },
+    {
+      "name": "H14 - Cantidad cero",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          },
+          {
+            "key": "Cookie",
+            "value": "{{managerCookie}}"
+          }
+        ],
+        "url": "{{baseUrl}}/management/inventory/movements",
+        "body": {
+          "mode": "raw",
+          "raw": "{\"branchId\": \"{{branchId}}\", \"itemId\": \"{{itemId}}\", \"quantity\": 0, \"type\": \"IN\", \"reason\": \"Verificación H14: entrada de 1 g de arroz\"}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('HTTP 400', () => pm.response.to.have.status(400));",
+              "pm.test('Error uniforme', () => pm.expect(pm.response.json()).to.have.all.keys('code','message','field'));"
+            ]
+          }
+        }
+      ],
+      "protocolProfileBehavior": {
+        "disableCookies": true
+      }
+    },
+    {
+      "name": "H14 - Cantidad decimal",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          },
+          {
+            "key": "Cookie",
+            "value": "{{managerCookie}}"
+          }
+        ],
+        "url": "{{baseUrl}}/management/inventory/movements",
+        "body": {
+          "mode": "raw",
+          "raw": "{\"branchId\": \"{{branchId}}\", \"itemId\": \"{{itemId}}\", \"quantity\": 1.5, \"type\": \"IN\", \"reason\": \"Verificación H14: entrada de 1 g de arroz\"}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('HTTP 400', () => pm.response.to.have.status(400));",
+              "pm.test('Error uniforme', () => pm.expect(pm.response.json()).to.have.all.keys('code','message','field'));"
+            ]
+          }
+        }
+      ],
+      "protocolProfileBehavior": {
+        "disableCookies": true
+      }
+    },
+    {
+      "name": "H14 - Cantidad texto",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          },
+          {
+            "key": "Cookie",
+            "value": "{{managerCookie}}"
+          }
+        ],
+        "url": "{{baseUrl}}/management/inventory/movements",
+        "body": {
+          "mode": "raw",
+          "raw": "{\"branchId\": \"{{branchId}}\", \"itemId\": \"{{itemId}}\", \"quantity\": \"1\", \"type\": \"IN\", \"reason\": \"Verificación H14: entrada de 1 g de arroz\"}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('HTTP 400', () => pm.response.to.have.status(400));",
+              "pm.test('Error uniforme', () => pm.expect(pm.response.json()).to.have.all.keys('code','message','field'));"
+            ]
+          }
+        }
+      ],
+      "protocolProfileBehavior": {
+        "disableCookies": true
+      }
+    },
+    {
+      "name": "H14 - Motivo vacío",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          },
+          {
+            "key": "Cookie",
+            "value": "{{managerCookie}}"
+          }
+        ],
+        "url": "{{baseUrl}}/management/inventory/movements",
+        "body": {
+          "mode": "raw",
+          "raw": "{\"branchId\": \"{{branchId}}\", \"itemId\": \"{{itemId}}\", \"quantity\": 1, \"type\": \"IN\", \"reason\": \"  \"}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('HTTP 400', () => pm.response.to.have.status(400));",
+              "pm.test('Error uniforme', () => pm.expect(pm.response.json()).to.have.all.keys('code','message','field'));"
+            ]
+          }
+        }
+      ],
+      "protocolProfileBehavior": {
+        "disableCookies": true
+      }
+    },
+    {
+      "name": "H14 - Motivo demasiado largo",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          },
+          {
+            "key": "Cookie",
+            "value": "{{managerCookie}}"
+          }
+        ],
+        "url": "{{baseUrl}}/management/inventory/movements",
+        "body": {
+          "mode": "raw",
+          "raw": "{\"branchId\": \"{{branchId}}\", \"itemId\": \"{{itemId}}\", \"quantity\": 1, \"type\": \"IN\", \"reason\": \"aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa\"}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('HTTP 400', () => pm.response.to.have.status(400));",
+              "pm.test('Error uniforme', () => pm.expect(pm.response.json()).to.have.all.keys('code','message','field'));"
+            ]
+          }
+        }
+      ],
+      "protocolProfileBehavior": {
+        "disableCookies": true
+      }
+    },
+    {
+      "name": "H14 - Tipo inválido",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          },
+          {
+            "key": "Cookie",
+            "value": "{{managerCookie}}"
+          }
+        ],
+        "url": "{{baseUrl}}/management/inventory/movements",
+        "body": {
+          "mode": "raw",
+          "raw": "{\"branchId\": \"{{branchId}}\", \"itemId\": \"{{itemId}}\", \"quantity\": 1, \"type\": \"TRANSFER\", \"reason\": \"Verificación H14: entrada de 1 g de arroz\"}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('HTTP 400', () => pm.response.to.have.status(400));",
+              "pm.test('Error uniforme', () => pm.expect(pm.response.json()).to.have.all.keys('code','message','field'));"
+            ]
+          }
+        }
+      ],
+      "protocolProfileBehavior": {
+        "disableCookies": true
+      }
+    },
+    {
+      "name": "H14 - UUID inválido",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          },
+          {
+            "key": "Cookie",
+            "value": "{{managerCookie}}"
+          }
+        ],
+        "url": "{{baseUrl}}/management/inventory/movements",
+        "body": {
+          "mode": "raw",
+          "raw": "{\"branchId\": \"{{branchId}}\", \"itemId\": \"invalid\", \"quantity\": 1, \"type\": \"IN\", \"reason\": \"Verificación H14: entrada de 1 g de arroz\"}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('HTTP 400', () => pm.response.to.have.status(400));",
+              "pm.test('Error uniforme', () => pm.expect(pm.response.json()).to.have.all.keys('code','message','field'));"
+            ]
+          }
+        }
+      ],
+      "protocolProfileBehavior": {
+        "disableCookies": true
+      }
+    },
+    {
+      "name": "H14 - Actor inyectado",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          },
+          {
+            "key": "Cookie",
+            "value": "{{managerCookie}}"
+          }
+        ],
+        "url": "{{baseUrl}}/management/inventory/movements",
+        "body": {
+          "mode": "raw",
+          "raw": "{\"branchId\": \"{{branchId}}\", \"itemId\": \"{{itemId}}\", \"quantity\": 1, \"type\": \"IN\", \"reason\": \"Verificación H14: entrada de 1 g de arroz\", \"createdById\": \"{{missingBranchId}}\"}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('HTTP 400', () => pm.response.to.have.status(400));",
+              "pm.test('Error uniforme', () => pm.expect(pm.response.json()).to.have.all.keys('code','message','field'));"
+            ]
+          }
+        }
+      ],
+      "protocolProfileBehavior": {
+        "disableCookies": true
+      }
+    },
+    {
+      "name": "H14 - Sucursal inexistente",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          },
+          {
+            "key": "Cookie",
+            "value": "{{generalCookie}}"
+          }
+        ],
+        "url": "{{baseUrl}}/management/inventory/movements",
+        "body": {
+          "mode": "raw",
+          "raw": "{\"branchId\": \"{{missingBranchId}}\", \"itemId\": \"{{itemId}}\", \"quantity\": 1, \"type\": \"IN\", \"reason\": \"Verificación H14: entrada de 1 g de arroz\"}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('HTTP 404', () => pm.response.to.have.status(404));",
+              "pm.test('Error uniforme', () => pm.expect(pm.response.json()).to.have.all.keys('code','message','field'));"
+            ]
+          }
+        }
+      ],
+      "protocolProfileBehavior": {
+        "disableCookies": true
+      }
+    },
+    {
+      "name": "H14 - Consultar saldo inicial",
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          },
+          {
+            "key": "Cookie",
+            "value": "{{managerCookie}}"
+          }
+        ],
+        "url": "{{baseUrl}}/management/branches/{{branchId}}/inventory"
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('HTTP 200', () => pm.response.to.have.status(200));",
+              "pm.test('Insumo de la sucursal', () => { const row=pm.response.json().find(item=>item.id===pm.environment.get('itemId')); pm.expect(row.branchId).to.equal(pm.environment.get('branchId')); pm.expect(row.unit).to.equal('g'); pm.environment.set('initialStock',row.currentStock); pm.environment.set('insufficientQuantity',row.currentStock+1); });"
+            ]
+          }
+        }
+      ],
+      "protocolProfileBehavior": {
+        "disableCookies": true
+      }
+    },
+    {
+      "name": "H14 - Stock insuficiente",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          },
+          {
+            "key": "Cookie",
+            "value": "{{managerCookie}}"
+          }
+        ],
+        "url": "{{baseUrl}}/management/inventory/movements",
+        "body": {
+          "mode": "raw",
+          "raw": "{\"branchId\": \"{{branchId}}\", \"itemId\": \"{{itemId}}\", \"quantity\": {{insufficientQuantity}}, \"type\": \"OUT\", \"reason\": \"Verificación H14: entrada de 1 g de arroz\"}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('HTTP 400', () => pm.response.to.have.status(400));",
+              "pm.test('Error uniforme', () => pm.expect(pm.response.json()).to.have.all.keys('code','message','field'));"
+            ]
+          }
+        }
+      ],
+      "protocolProfileBehavior": {
+        "disableCookies": true
+      }
+    },
+    {
+      "name": "H14 - Registrar entrada de 1 g",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          },
+          {
+            "key": "Cookie",
+            "value": "{{managerCookie}}"
+          }
+        ],
+        "url": "{{baseUrl}}/management/inventory/movements",
+        "body": {
+          "mode": "raw",
+          "raw": "{\"branchId\": \"{{branchId}}\", \"itemId\": \"{{itemId}}\", \"quantity\": 1, \"type\": \"IN\", \"reason\": \"Verificación H14: entrada de 1 g de arroz\"}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('HTTP 201', () => pm.response.to.have.status(201));",
+              "pm.test('Movimiento auditado', () => { const row=pm.response.json(); pm.expect(row).to.have.all.keys('id','itemId','quantity','type','reason','createdById','createdAt'); pm.expect(row.itemId).to.equal(pm.environment.get('itemId')); pm.expect(row.quantity).to.equal(1); });",
+              "pm.test('Entrada', () => pm.expect(pm.response.json().type).to.equal('IN'));"
+            ]
+          }
+        }
+      ],
+      "protocolProfileBehavior": {
+        "disableCookies": true
+      }
+    },
+    {
+      "name": "H14 - Verificar aumento",
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          },
+          {
+            "key": "Cookie",
+            "value": "{{managerCookie}}"
+          }
+        ],
+        "url": "{{baseUrl}}/management/branches/{{branchId}}/inventory"
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('HTTP 200', () => pm.response.to.have.status(200));",
+              "pm.test('Stock incrementado', () => pm.expect(pm.response.json().find(row=>row.id===pm.environment.get('itemId')).currentStock).to.equal(Number(pm.environment.get('initialStock'))+1));"
+            ]
+          }
+        }
+      ],
+      "protocolProfileBehavior": {
+        "disableCookies": true
+      }
+    },
+    {
+      "name": "H14 - Registrar salida de 1 g",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          },
+          {
+            "key": "Cookie",
+            "value": "{{managerCookie}}"
+          }
+        ],
+        "url": "{{baseUrl}}/management/inventory/movements",
+        "body": {
+          "mode": "raw",
+          "raw": "{\"branchId\": \"{{branchId}}\", \"itemId\": \"{{itemId}}\", \"quantity\": 1, \"type\": \"OUT\", \"reason\": \"Verificación H14: salida de 1 g de arroz\"}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('HTTP 201', () => pm.response.to.have.status(201));",
+              "pm.test('Movimiento auditado', () => { const row=pm.response.json(); pm.expect(row).to.have.all.keys('id','itemId','quantity','type','reason','createdById','createdAt'); pm.expect(row.itemId).to.equal(pm.environment.get('itemId')); pm.expect(row.quantity).to.equal(1); });",
+              "pm.test('Salida', () => pm.expect(pm.response.json().type).to.equal('OUT'));"
+            ]
+          }
+        }
+      ],
+      "protocolProfileBehavior": {
+        "disableCookies": true
+      }
+    },
+    {
+      "name": "H14 - Verificar saldo conservado",
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          },
+          {
+            "key": "Cookie",
+            "value": "{{managerCookie}}"
+          }
+        ],
+        "url": "{{baseUrl}}/management/branches/{{branchId}}/inventory"
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('HTTP 200', () => pm.response.to.have.status(200));",
+              "pm.test('Saldo inicial conservado', () => pm.expect(pm.response.json().find(row=>row.id===pm.environment.get('itemId')).currentStock).to.equal(Number(pm.environment.get('initialStock'))));"
+            ]
+          }
+        }
+      ],
+      "protocolProfileBehavior": {
+        "disableCookies": true
+      }
+    },
+    {
+      "name": "H14 - Cerrar sesión",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          },
+          {
+            "key": "Cookie",
+            "value": "{{managerCookie}}"
+          }
+        ],
+        "url": "{{baseUrl}}/auth/logout"
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('HTTP 204', () => pm.response.to.have.status(204));"
+            ]
+          }
+        }
+      ],
+      "protocolProfileBehavior": {
+        "disableCookies": true
+      }
+    },
+    {
+      "name": "H14 - Sesión revocada",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          },
+          {
+            "key": "Cookie",
+            "value": "{{managerCookie}}"
+          }
+        ],
+        "url": "{{baseUrl}}/management/inventory/movements",
+        "body": {
+          "mode": "raw",
+          "raw": "{\"branchId\": \"{{branchId}}\", \"itemId\": \"{{itemId}}\", \"quantity\": 1, \"type\": \"IN\", \"reason\": \"Verificación H14: entrada de 1 g de arroz\"}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('HTTP 401', () => pm.response.to.have.status(401));",
+              "pm.test('Error uniforme', () => pm.expect(pm.response.json()).to.have.all.keys('code','message','field'));"
+            ]
+          }
+        }
+      ],
+      "protocolProfileBehavior": {
+        "disableCookies": true
+      }
+    }
+  ]
+}
