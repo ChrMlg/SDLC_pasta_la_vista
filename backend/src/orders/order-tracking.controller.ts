@@ -4,6 +4,7 @@ import { VerifiedSessionGuard, type AuthenticatedRequest } from '../common/sessi
 import { NotificationsService } from '../notifications/notifications.service';
 import { OrderError } from './orders.service';
 import { expectedPrevious } from './order-transition';
+import { KitchenActionsService } from '../kitchen/kitchen-actions.service';
 
 const uuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 const conflict = (message: string) => new OrderError(409, 'ORDER_STATUS_CONFLICT', message);
@@ -11,7 +12,7 @@ const conflict = (message: string) => new OrderError(409, 'ORDER_STATUS_CONFLICT
 @Controller('orders')
 @UseGuards(VerifiedSessionGuard)
 export class OrderTrackingController {
-  constructor(private readonly db: PrismaClient, private readonly notifications: NotificationsService) {}
+  constructor(private readonly db: PrismaClient, private readonly notifications: NotificationsService, private readonly kitchen: KitchenActionsService) {}
 
   @Get()
   async list(@Req() request: AuthenticatedRequest) {
@@ -38,6 +39,10 @@ export class OrderTrackingController {
     const user = request.user!;
     if (user.role !== 'KITCHEN' && user.role !== 'WAITER') throw new OrderError(403, 'FORBIDDEN', 'Sin permiso para actualizar pedidos');
     if (!user.branchId) throw new OrderError(403, 'FORBIDDEN', 'Sucursal requerida');
+    if (user.role === 'KITCHEN' && status === 'IN_PREPARATION') {
+      const result = await this.kitchen.change(user.branchId, orderId, 'TAKE', request.body, user);
+      return { id: result.orderId, status: result.orderStatus };
+    }
     const expected = expectedPrevious(user.role, status);
     if (!expected) throw new OrderError(403, 'FORBIDDEN', 'Transición no permitida');
     try {
@@ -54,7 +59,7 @@ export class OrderTrackingController {
         if (status === 'IN_PREPARATION' || status === 'READY')
           await tx.kitchenTicket.update({ where: { orderId }, data: { status } });
         if (status === 'IN_PREPARATION' || status === 'READY')
-          await tx.orderItem.updateMany({ where: { orderId }, data: { status } });
+          await tx.orderItem.updateMany({ where: { orderId }, data: { status, ...(status === 'READY' ? { isReady: true } : {}) } });
         return { id: orderId, status };
       }, { isolationLevel: Prisma.TransactionIsolationLevel.Serializable });
       if (status === 'IN_PREPARATION' || status === 'READY') {
@@ -68,6 +73,10 @@ export class OrderTrackingController {
       return result;
     } catch (error) {
       if (error && typeof error === 'object' && 'code' in error && error.code === 'P2034') throw conflict('El estado del pedido cambió');
+      // Las consultas FOR UPDATE pueden exponer el conflicto SQL como P2010.
+      if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === 'P2010' &&
+          (error.meta?.code === '40001' || error.meta?.code === '40P01'))
+        throw conflict('El estado del pedido cambió');
       throw error;
     }
   }

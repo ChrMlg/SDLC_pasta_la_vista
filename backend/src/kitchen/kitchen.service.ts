@@ -25,7 +25,7 @@ export class KitchenService {
       orderBy: [{ createdAt: 'asc' }, { orderId: 'asc' }],
       select: { status: true, createdAt: true, order: { select: {
         id: true, orderNumber: true, type: true, updatedAt: true, table: { select: { number: true } },
-        items: { orderBy: { id: 'asc' }, select: { id: true, quantity: true, note: true, status: true, dish: { select: { name: true } } } },
+        items: { orderBy: { id: 'asc' }, select: { id: true, quantity: true, note: true, status: true, isReady: true, dish: { select: { name: true } } } },
       } } },
     });
     return { items: tickets.map(ticket => ({
@@ -35,7 +35,7 @@ export class KitchenService {
       // Conserva el campo que ya consumía el seguimiento H30 en esta misma ruta.
       updatedAt: ticket.order.updatedAt,
       items: ticket.order.items.map(item => ({ id: item.id, dishName: item.dish.name, quantity: item.quantity,
-        note: item.note, isReady: item.status === 'READY' })),
+        note: item.note, isReady: item.isReady || item.status === 'READY' })),
     })) };
   }
 }

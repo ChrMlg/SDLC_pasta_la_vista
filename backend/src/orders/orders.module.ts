@@ -8,9 +8,10 @@ import { NotificationsModule } from '../notifications/notifications.module';
 import { NotificationsService } from '../notifications/notifications.service';
 import { MySeatingController, SeatingController } from './seating.controller';
 import { OrderTrackingController } from './order-tracking.controller';
+import { KitchenModule } from '../kitchen/kitchen.module';
 
 @Module({
-  imports: [NotificationsModule],
+  imports: [NotificationsModule, KitchenModule],
   controllers: [OrdersController, SeatingController, MySeatingController, OrderTrackingController],
   providers: [
     VerifiedSessionGuard,
