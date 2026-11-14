@@ -49,7 +49,7 @@ export class PrismaOrdersRepository implements OrdersRepository {
             unitPrice: byId.get(item.dishId)!.price, note: item.note })) } },
       });
       // This is the minimal contract consumed by the kitchen module. Kitchen owns subsequent transitions.
-      if (input.type === 'DINE_IN') await tx.kitchenTicket.create({ data: { orderId: order.id } });
+      if (input.type === 'DINE_IN') await tx.kitchenTicket.create({ data: { orderId: order.id, branchId: order.branchId } });
       return { id: order.id, orderNumber: order.orderNumber, status: 'PENDING', createdAt: order.createdAt,
         total: order.total.toFixed(2), type: order.type, branchId: order.branchId, tableId: order.tableId };
     }, { isolationLevel: Prisma.TransactionIsolationLevel.Serializable, maxWait: 5000, timeout: 10000 });
