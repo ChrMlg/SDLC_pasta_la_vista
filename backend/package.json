@@ -23,6 +23,7 @@
     "test:h13": "node --test test/h13-integration.test.cjs",
     "db:seed:h13:qa": "node scripts/seed-h13-qa.cjs",
     "test:h14": "node --test test/h14-integration.test.cjs",
+    "test:h15": "node --test test/h15-integration.test.cjs",
     "db:project": "node scripts/project-db.cjs"
   },
   "dependencies": {

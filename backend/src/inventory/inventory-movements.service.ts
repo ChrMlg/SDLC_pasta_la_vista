@@ -27,6 +27,13 @@ export class InventoryMovementsService {
       const movement = await tx.inventoryMovement.create({ data: {
         itemId: item.id, quantity: input.quantity, type: input.type, reason: input.reason, createdById: session.userId,
       } });
+      if (currentStock <= item.minStock) {
+        // El bloqueo del insumo serializa la comprobación; el índice parcial impide duplicar ACTIVE.
+        const active = await tx.inventoryAlert.findFirst({ where: { itemId: item.id, status: 'ACTIVE' }, select: { id: true } });
+        if (!active) await tx.inventoryAlert.create({ data: {
+          branchId: item.branchId, itemId: item.id, currentStock, minStock: item.minStock,
+        } });
+      }
       if (input.type === 'IN' && currentStock > item.minStock) {
         await tx.inventoryAlert.updateMany({ where: { itemId: item.id, status: 'ACTIVE' },
           data: { status: 'RESOLVED', resolvedAt: new Date(), resolvedByUserId: session.userId } });

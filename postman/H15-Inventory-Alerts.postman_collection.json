@@ -1,0 +1,675 @@
+{
+  "info": {
+    "name": "H15 - Alertas de reabastecimiento (#46)",
+    "description": "Consulta y permisos de alertas usando PostgreSQL local con Docker. Importar el entorno privado postman/.env.project.local o completar H15-Local sin versionar secretos. Ejecutar en orden. Esta colección no modifica existencias; las pruebas test:h15 verifican generación IN/OUT, límite, resolución, nuevo período, concurrencia y rollback con datos temporales aislados dentro de la misma base local. El listado contiene ACTIVE y RESOLVED: currentStock/minStock de la alerta son históricos, item.currentStock/item.minStock son valores actuales. No existe filtro status ni cron.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "item": [
+    {
+      "name": "H15 - Sin sesión",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": "{{baseUrl}}/management/branches/{{branchId}}/inventory/alerts"
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('HTTP 401', () => pm.response.to.have.status(401));",
+              "pm.test('Error uniforme', () => pm.expect(pm.response.json()).to.have.all.keys('code','message','field'));"
+            ]
+          }
+        }
+      ],
+      "protocolProfileBehavior": {
+        "disableCookies": true
+      }
+    },
+    {
+      "name": "H15 - Inicio de sesión customer",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "url": "{{baseUrl}}/auth/login",
+        "body": {
+          "mode": "raw",
+          "raw": "{\"email\": \"{{customerEmail}}\", \"password\": \"{{customerPassword}}\"}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        }
+      },
+      "event": [
+        {
+          "listen": "prerequest",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.environment.unset('customerCookie');"
+            ]
+          }
+        },
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('HTTP 200', () => pm.response.to.have.status(200));",
+              "if (pm.response.code === 200) { const cookie=pm.response.headers.get('set-cookie'); pm.test('Cookie de sesión', () => pm.expect(cookie).to.include('HttpOnly')); pm.environment.set('customerCookie',cookie.split(';')[0]); }"
+            ]
+          }
+        }
+      ],
+      "protocolProfileBehavior": {
+        "disableCookies": true
+      }
+    },
+    {
+      "name": "H15 - Inicio de sesión waiter",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "url": "{{baseUrl}}/auth/login",
+        "body": {
+          "mode": "raw",
+          "raw": "{\"email\": \"{{waiterEmail}}\", \"password\": \"{{waiterPassword}}\"}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        }
+      },
+      "event": [
+        {
+          "listen": "prerequest",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.environment.unset('waiterCookie');"
+            ]
+          }
+        },
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('HTTP 200', () => pm.response.to.have.status(200));",
+              "if (pm.response.code === 200) { const cookie=pm.response.headers.get('set-cookie'); pm.test('Cookie de sesión', () => pm.expect(cookie).to.include('HttpOnly')); pm.environment.set('waiterCookie',cookie.split(';')[0]); }"
+            ]
+          }
+        }
+      ],
+      "protocolProfileBehavior": {
+        "disableCookies": true
+      }
+    },
+    {
+      "name": "H15 - Inicio de sesión kitchen",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "url": "{{baseUrl}}/auth/login",
+        "body": {
+          "mode": "raw",
+          "raw": "{\"email\": \"{{kitchenEmail}}\", \"password\": \"{{kitchenPassword}}\"}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        }
+      },
+      "event": [
+        {
+          "listen": "prerequest",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.environment.unset('kitchenCookie');"
+            ]
+          }
+        },
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('HTTP 200', () => pm.response.to.have.status(200));",
+              "if (pm.response.code === 200) { const cookie=pm.response.headers.get('set-cookie'); pm.test('Cookie de sesión', () => pm.expect(cookie).to.include('HttpOnly')); pm.environment.set('kitchenCookie',cookie.split(';')[0]); }"
+            ]
+          }
+        }
+      ],
+      "protocolProfileBehavior": {
+        "disableCookies": true
+      }
+    },
+    {
+      "name": "H15 - Inicio de sesión manager",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "url": "{{baseUrl}}/auth/login",
+        "body": {
+          "mode": "raw",
+          "raw": "{\"email\": \"{{managerEmail}}\", \"password\": \"{{managerPassword}}\"}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        }
+      },
+      "event": [
+        {
+          "listen": "prerequest",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.environment.unset('managerCookie');"
+            ]
+          }
+        },
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('HTTP 200', () => pm.response.to.have.status(200));",
+              "if (pm.response.code === 200) { const cookie=pm.response.headers.get('set-cookie'); pm.test('Cookie de sesión', () => pm.expect(cookie).to.include('HttpOnly')); pm.environment.set('managerCookie',cookie.split(';')[0]); }"
+            ]
+          }
+        }
+      ],
+      "protocolProfileBehavior": {
+        "disableCookies": true
+      }
+    },
+    {
+      "name": "H15 - Inicio de sesión otherManager",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "url": "{{baseUrl}}/auth/login",
+        "body": {
+          "mode": "raw",
+          "raw": "{\"email\": \"{{otherManagerEmail}}\", \"password\": \"{{otherManagerPassword}}\"}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        }
+      },
+      "event": [
+        {
+          "listen": "prerequest",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.environment.unset('otherManagerCookie');"
+            ]
+          }
+        },
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('HTTP 200', () => pm.response.to.have.status(200));",
+              "if (pm.response.code === 200) { const cookie=pm.response.headers.get('set-cookie'); pm.test('Cookie de sesión', () => pm.expect(cookie).to.include('HttpOnly')); pm.environment.set('otherManagerCookie',cookie.split(';')[0]); }"
+            ]
+          }
+        }
+      ],
+      "protocolProfileBehavior": {
+        "disableCookies": true
+      }
+    },
+    {
+      "name": "H15 - Inicio de sesión general",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "url": "{{baseUrl}}/auth/login",
+        "body": {
+          "mode": "raw",
+          "raw": "{\"email\": \"{{generalEmail}}\", \"password\": \"{{generalPassword}}\"}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        }
+      },
+      "event": [
+        {
+          "listen": "prerequest",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.environment.unset('generalCookie');"
+            ]
+          }
+        },
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('HTTP 200', () => pm.response.to.have.status(200));",
+              "if (pm.response.code === 200) { const cookie=pm.response.headers.get('set-cookie'); pm.test('Cookie de sesión', () => pm.expect(cookie).to.include('HttpOnly')); pm.environment.set('generalCookie',cookie.split(';')[0]); }"
+            ]
+          }
+        }
+      ],
+      "protocolProfileBehavior": {
+        "disableCookies": true
+      }
+    },
+    {
+      "name": "H15 - Rol denegado customer",
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "Cookie",
+            "value": "{{customerCookie}}"
+          }
+        ],
+        "url": "{{baseUrl}}/management/branches/{{branchId}}/inventory/alerts"
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('HTTP 403', () => pm.response.to.have.status(403));",
+              "pm.test('Error uniforme', () => pm.expect(pm.response.json()).to.have.all.keys('code','message','field'));"
+            ]
+          }
+        }
+      ],
+      "protocolProfileBehavior": {
+        "disableCookies": true
+      }
+    },
+    {
+      "name": "H15 - Rol denegado waiter",
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "Cookie",
+            "value": "{{waiterCookie}}"
+          }
+        ],
+        "url": "{{baseUrl}}/management/branches/{{branchId}}/inventory/alerts"
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('HTTP 403', () => pm.response.to.have.status(403));",
+              "pm.test('Error uniforme', () => pm.expect(pm.response.json()).to.have.all.keys('code','message','field'));"
+            ]
+          }
+        }
+      ],
+      "protocolProfileBehavior": {
+        "disableCookies": true
+      }
+    },
+    {
+      "name": "H15 - Rol denegado kitchen",
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "Cookie",
+            "value": "{{kitchenCookie}}"
+          }
+        ],
+        "url": "{{baseUrl}}/management/branches/{{branchId}}/inventory/alerts"
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('HTTP 403', () => pm.response.to.have.status(403));",
+              "pm.test('Error uniforme', () => pm.expect(pm.response.json()).to.have.all.keys('code','message','field'));"
+            ]
+          }
+        }
+      ],
+      "protocolProfileBehavior": {
+        "disableCookies": true
+      }
+    },
+    {
+      "name": "H15 - Gerente de otra sucursal",
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "Cookie",
+            "value": "{{otherManagerCookie}}"
+          }
+        ],
+        "url": "{{baseUrl}}/management/branches/{{branchId}}/inventory/alerts"
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('HTTP 404', () => pm.response.to.have.status(404));",
+              "pm.test('Error uniforme', () => pm.expect(pm.response.json()).to.have.all.keys('code','message','field'));"
+            ]
+          }
+        }
+      ],
+      "protocolProfileBehavior": {
+        "disableCookies": true
+      }
+    },
+    {
+      "name": "H15 - Listado gerente",
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "Cookie",
+            "value": "{{managerCookie}}"
+          }
+        ],
+        "url": "{{baseUrl}}/management/branches/{{branchId}}/inventory/alerts"
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('HTTP 200', () => pm.response.to.have.status(200));",
+              "pm.test('Lista por sucursal con datos del insumo', () => { const rows=pm.response.json(); pm.expect(rows).to.be.an('array'); rows.forEach(row => { pm.expect(row.branchId).to.eql(pm.environment.get('branchId')); pm.expect(row.item.name).to.be.a('string'); pm.expect(row.item.currentStock).to.be.at.least(0); pm.expect(row.branch.name).to.be.a('string'); pm.expect(row.status).to.be.oneOf(['ACTIVE','RESOLVED']); }); });",
+              "pm.test('Una sola ACTIVE por insumo', () => { const active=pm.response.json().filter(row=>row.status==='ACTIVE'); pm.expect(new Set(active.map(row=>row.itemId)).size).to.eql(active.length); });",
+              "pm.test('Auditoría de resolución consistente', () => pm.response.json().forEach(row => { if(row.status==='ACTIVE') {pm.expect(row.resolvedAt).to.eql(null);pm.expect(row.resolvedByUserId).to.eql(null);} else {pm.expect(row.resolvedAt).to.be.a('string');pm.expect(row.resolvedByUserId).to.be.a('string');} }));"
+            ]
+          }
+        }
+      ],
+      "protocolProfileBehavior": {
+        "disableCookies": true
+      }
+    },
+    {
+      "name": "H15 - Listado gerente general",
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "Cookie",
+            "value": "{{generalCookie}}"
+          }
+        ],
+        "url": "{{baseUrl}}/management/branches/{{branchId}}/inventory/alerts"
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('HTTP 200', () => pm.response.to.have.status(200));",
+              "pm.test('Lista por sucursal con datos del insumo', () => { const rows=pm.response.json(); pm.expect(rows).to.be.an('array'); rows.forEach(row => { pm.expect(row.branchId).to.eql(pm.environment.get('branchId')); pm.expect(row.item.name).to.be.a('string'); pm.expect(row.item.currentStock).to.be.at.least(0); pm.expect(row.branch.name).to.be.a('string'); pm.expect(row.status).to.be.oneOf(['ACTIVE','RESOLVED']); }); });",
+              "pm.test('Una sola ACTIVE por insumo', () => { const active=pm.response.json().filter(row=>row.status==='ACTIVE'); pm.expect(new Set(active.map(row=>row.itemId)).size).to.eql(active.length); });",
+              "pm.test('Auditoría de resolución consistente', () => pm.response.json().forEach(row => { if(row.status==='ACTIVE') {pm.expect(row.resolvedAt).to.eql(null);pm.expect(row.resolvedByUserId).to.eql(null);} else {pm.expect(row.resolvedAt).to.be.a('string');pm.expect(row.resolvedByUserId).to.be.a('string');} }));"
+            ]
+          }
+        }
+      ],
+      "protocolProfileBehavior": {
+        "disableCookies": true
+      }
+    },
+    {
+      "name": "H15 - General otra sucursal",
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "Cookie",
+            "value": "{{generalCookie}}"
+          }
+        ],
+        "url": "{{baseUrl}}/management/branches/{{otherBranchId}}/inventory/alerts"
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('HTTP 200', () => pm.response.to.have.status(200));",
+              "pm.test('Sin datos de otra sucursal', () => pm.response.json().forEach(row => pm.expect(row.branchId).to.eql(pm.environment.get('otherBranchId'))));"
+            ]
+          }
+        }
+      ],
+      "protocolProfileBehavior": {
+        "disableCookies": true
+      }
+    },
+    {
+      "name": "H15 - Sucursal inexistente",
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "Cookie",
+            "value": "{{generalCookie}}"
+          }
+        ],
+        "url": "{{baseUrl}}/management/branches/{{missingBranchId}}/inventory/alerts"
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('HTTP 404', () => pm.response.to.have.status(404));",
+              "pm.test('Error uniforme', () => pm.expect(pm.response.json()).to.have.all.keys('code','message','field'));"
+            ]
+          }
+        }
+      ],
+      "protocolProfileBehavior": {
+        "disableCookies": true
+      }
+    },
+    {
+      "name": "H15 - UUID inválido",
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "Cookie",
+            "value": "{{generalCookie}}"
+          }
+        ],
+        "url": "{{baseUrl}}/management/branches/invalid/inventory/alerts"
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('HTTP 400', () => pm.response.to.have.status(400));",
+              "pm.test('Error uniforme', () => pm.expect(pm.response.json()).to.have.all.keys('code','message','field'));"
+            ]
+          }
+        }
+      ],
+      "protocolProfileBehavior": {
+        "disableCookies": true
+      }
+    },
+    {
+      "name": "H15 - Filtro no definido en contrato",
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "Cookie",
+            "value": "{{managerCookie}}"
+          }
+        ],
+        "url": "{{baseUrl}}/management/branches/{{branchId}}/inventory/alerts?status=ACTIVE"
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('HTTP 400', () => pm.response.to.have.status(400));",
+              "pm.test('Error uniforme', () => pm.expect(pm.response.json()).to.have.all.keys('code','message','field'));"
+            ]
+          }
+        }
+      ],
+      "protocolProfileBehavior": {
+        "disableCookies": true
+      }
+    },
+    {
+      "name": "H15 - No permite cambiar sucursal por query",
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "Cookie",
+            "value": "{{managerCookie}}"
+          }
+        ],
+        "url": "{{baseUrl}}/management/branches/{{branchId}}/inventory/alerts?branchId={{otherBranchId}}"
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('HTTP 400', () => pm.response.to.have.status(400));",
+              "pm.test('Error uniforme', () => pm.expect(pm.response.json()).to.have.all.keys('code','message','field'));"
+            ]
+          }
+        }
+      ],
+      "protocolProfileBehavior": {
+        "disableCookies": true
+      }
+    },
+    {
+      "name": "H15 - Cerrar sesión gerente",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Cookie",
+            "value": "{{managerCookie}}"
+          }
+        ],
+        "url": "{{baseUrl}}/auth/logout"
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('HTTP 204', () => pm.response.to.have.status(204));"
+            ]
+          }
+        }
+      ],
+      "protocolProfileBehavior": {
+        "disableCookies": true
+      }
+    },
+    {
+      "name": "H15 - Sesión revocada",
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "Cookie",
+            "value": "{{managerCookie}}"
+          }
+        ],
+        "url": "{{baseUrl}}/management/branches/{{branchId}}/inventory/alerts"
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('HTTP 401', () => pm.response.to.have.status(401));",
+              "pm.test('Error uniforme', () => pm.expect(pm.response.json()).to.have.all.keys('code','message','field'));"
+            ]
+          }
+        }
+      ],
+      "protocolProfileBehavior": {
+        "disableCookies": true
+      }
+    }
+  ]
+}
