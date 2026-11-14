@@ -46,6 +46,7 @@ model Branch {
   reservations Reservation[]
   inventoryItems InventoryItem[]
   inventoryAlerts InventoryAlert[]
+  reviews Review[]
 }
 
 model User {
@@ -75,6 +76,7 @@ model User {
   reservations Reservation[]
   inventoryMovements InventoryMovement[]
   resolvedInventoryAlerts InventoryAlert[]
+  reviews Review[]
 }
 
 model AuthSession {
@@ -221,6 +223,7 @@ model Order {
   kitchenTicket KitchenTicket?
   billId String? @db.Uuid
   bill Bill? @relation(fields: [billId], references: [id], onDelete: Restrict)
+  review Review?
 
   @@index([branchId, tableId, status])
   @@index([clientId, createdAt])
@@ -231,6 +234,22 @@ enum BillStatus {
   OPEN
   PAID
   CANCELLED
+}
+
+model Review {
+  id String @id @default(uuid()) @db.Uuid
+  orderId String @unique @db.Uuid
+  order Order @relation(fields: [orderId], references: [id], onDelete: Restrict)
+  clientId String @db.Uuid
+  client User @relation(fields: [clientId], references: [id], onDelete: Restrict)
+  branchId String @db.Uuid
+  branch Branch @relation(fields: [branchId], references: [id], onDelete: Restrict)
+  rating Int
+  comment String? @db.VarChar(500)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([branchId, createdAt])
 }
 
 enum PaymentStatus {

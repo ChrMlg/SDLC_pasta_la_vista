@@ -1,0 +1,379 @@
+H23 #54 — Resultados de validación
+Fecha: 2026-11-13 (America/El_Salvador)
+Entorno: NestJS/Prisma, PostgreSQL local y backend Docker; volumen existente.
+
+MIGRACIÓN Y BUILD
+Migración aditiva aplicada: 20261113010000_h23_order_reviews.
+Generación Prisma, build y npm start: salida 0.
+No se eliminaron ni restablecieron datos.
+
+CONSERVACIÓN
+La huella de datos del proyecto, pedidos, reseñas, movimientos y alertas coincidió antes y después de las suites.
+La entrega de Cocina se simula solo en pedidos temporales propios de H23; integración productiva pendiente.
+
+POSTMAN
+33 solicitudes y 33 scripts con sintaxis verificada; plantilla sin secretos.
+Preparado pero no ejecutado con Postman/Newman.
+
+
+TESTS
+# tests 24
+# pass 24
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 2447.707826
+
+DOCKER-TESTS
+
+> test:h23
+> node --test test/h23-rules.test.cjs test/h23-integration.test.cjs
+
+TAP version 13
+# Subtest: H23 \#54: customer reviews with local PostgreSQL
+    # Subtest: verified session is mandatory; forged identity headers are ignored
+    ok 1 - verified session is mandatory; forged identity headers are ignored
+      ---
+      duration_ms: 42.601899
+      type: 'test'
+      ...
+    # Subtest: waiter cannot access either endpoint
+    ok 2 - waiter cannot access either endpoint
+      ---
+      duration_ms: 13.337652
+      type: 'test'
+      ...
+    # Subtest: kitchen cannot access either endpoint
+    ok 3 - kitchen cannot access either endpoint
+      ---
+      duration_ms: 11.588219
+      type: 'test'
+      ...
+    # Subtest: manager cannot access either endpoint
+    ok 4 - manager cannot access either endpoint
+      ---
+      duration_ms: 11.547062
+      type: 'test'
+      ...
+    # Subtest: general cannot access either endpoint
+    ok 5 - general cannot access either endpoint
+      ---
+      duration_ms: 9.170876
+      type: 'test'
+      ...
+    # Subtest: missing and another customer orders return indistinguishable 404 errors
+    ok 6 - missing and another customer orders return indistinguishable 404 errors
+      ---
+      duration_ms: 33.105948
+      type: 'test'
+      ...
+    # Subtest: invalid IDs, body types, ratings, comments and identity injection are rejected without writes
+    ok 7 - invalid IDs, body types, ratings, comments and identity injection are rejected without writes
+      ---
+      duration_ms: 113.776744
+      type: 'test'
+      ...
+    # Subtest: eligibility exposes only the specified contract and does not create a review
+    ok 8 - eligibility exposes only the specified contract and does not create a review
+      ---
+      duration_ms: 8.572509
+      type: 'test'
+      ...
+    # Subtest: non-delivered orders are ineligible and cannot be reviewed
+    ok 9 - non-delivered orders are ineligible and cannot be reviewed
+      ---
+      duration_ms: 109.942437
+      type: 'test'
+      ...
+    # Subtest: missing delivery date, future date and expired window return 409 on submission
+    ok 10 - missing delivery date, future date and expired window return 409 on submission
+      ---
+      duration_ms: 69.525782
+      type: 'test'
+      ...
+    # Subtest: unlinked orders return 409 without exposing order details
+    ok 11 - unlinked orders return 409 without exposing order details
+      ---
+      duration_ms: 20.291744
+      type: 'test'
+      ...
+    # Subtest: valid review derives author and branch and returns exactly the issue contract
+    ok 12 - valid review derives author and branch and returns exactly the issue contract
+      ---
+      duration_ms: 62.676968
+      type: 'test'
+      ...
+    # Subtest: rating limits and optional, null, empty or 500-character comments are accepted
+    ok 13 - rating limits and optional, null, empty or 500-character comments are accepted
+      ---
+      duration_ms: 72.543396
+      type: 'test'
+      ...
+    # Subtest: concurrent submissions create exactly one review and return 409 to the rest
+    ok 14 - concurrent submissions create exactly one review and return 409 to the rest
+      ---
+      duration_ms: 70.033195
+      type: 'test'
+      ...
+    # Subtest: eligibility is rechecked at submission instead of trusting an earlier GET
+    ok 15 - eligibility is rechecked at submission instead of trusting an earlier GET
+      ---
+      duration_ms: 27.072369
+      type: 'test'
+      ...
+    # Subtest: transaction rollback removes an inserted review if the write fails afterwards
+    ok 16 - transaction rollback removes an inserted review if the write fails afterwards
+      ---
+      duration_ms: 19.819808
+      type: 'test'
+      ...
+    # Subtest: database rejects invalid ratings, oversize comments and duplicate order reviews
+    ok 17 - database rejects invalid ratings, oversize comments and duplicate order reviews
+      ---
+      duration_ms: 20.742569
+      type: 'test'
+      ...
+    # Subtest: customer self-service order is already linked; delivered fixture can be reviewed without a code
+    ok 18 - customer self-service order is already linked; delivered fixture can be reviewed without a code
+      ---
+      duration_ms: 77.341766
+      type: 'test'
+      ...
+    # Subtest: waiter order requires existing link-code confirmation before review
+    ok 19 - waiter order requires existing link-code confirmation before review
+      ---
+      duration_ms: 77.010056
+      type: 'test'
+      ...
+    # Subtest: logged out session cannot read or submit reviews
+    ok 20 - logged out session cannot read or submit reviews
+      ---
+      duration_ms: 22.507279
+      type: 'test'
+      ...
+    1..20
+ok 1 - H23 \#54: customer reviews with local PostgreSQL
+  ---
+  duration_ms: 1599.151165
+  type: 'test'
+  ...
+# Subtest: H23: exactly 720 UTC hours is eligible; one millisecond later is expired
+ok 2 - H23: exactly 720 UTC hours is eligible; one millisecond later is expired
+  ---
+  duration_ms: 1.29802
+  type: 'test'
+  ...
+# Subtest: H23: equivalent UTC offsets have the same deadline
+ok 3 - H23: equivalent UTC offsets have the same deadline
+  ---
+  duration_ms: 0.184275
+  type: 'test'
+  ...
+# Subtest: H23: missing, invalid or future delivery dates are not eligible
+ok 4 - H23: missing, invalid or future delivery dates are not eligible
+  ---
+  duration_ms: 0.20084
+  type: 'test'
+  ...
+1..4
+# tests 24
+# suites 0
+# pass 24
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 1801.717963
+
+
+UNIT
+# tests 25
+# pass 25
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 398.523348
+
+H10
+# tests 28
+# pass 28
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 3006.299879
+
+H11
+# tests 23
+# pass 23
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 2586.398767
+
+H12
+# tests 18
+# pass 18
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 3130.27275
+
+H13
+# tests 17
+# pass 17
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 3463.829125
+
+H14
+# tests 21
+# pass 21
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 2920.517848
+
+H15
+# tests 20
+# pass 20
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 3277.080905
+
+INTEGRATION
+
+> test:integration
+> node test/integration.cjs
+
+OK 1: Login customer
+OK 2: Login otherCustomer
+OK 3: Login waiter
+OK 4: Login otherWaiter
+OK 5: Login kitchen
+OK 6: Login otherKitchen
+OK 7: Login manager
+OK 8: Login otherManager
+OK 9: Login general
+OK 10: Health con consulta PostgreSQL
+OK 11: Sin sesión
+OK 12: No se confía identidad en cabeceras
+OK 13: Login incorrecto
+OK 14: Registro rechaza escalación de rol
+OK 15: Registro exige perfil
+OK 16: Registro válido
+OK 17: Correo duplicado
+OK 18: Cuenta desactivada invalida sesión
+OK 19: Cuenta desactivada no inicia sesión
+OK 20: H1 crear platillo
+OK 21: H1 nombre normalizado duplicado
+OK 22: H1 rol customer no escribe
+OK 23: H1 rol waiter no escribe
+OK 24: H1 rol kitchen no escribe
+OK 25: H1 gerente ajeno
+OK 26: H1 precio inválido
+OK 27: H3 menú de sucursal
+OK 28: H3 página inválida
+OK 29: H3 sucursal ajena para personal
+OK 30: H2 concurrencia 200/409
+OK 31: H5 platillo no disponible
+OK 32: H2 rehabilitar
+OK 33: H5 cantidad cero
+OK 34: H5 identidad inyectada
+OK 35: H4 rol incorrecto
+OK 36: H4 sucursal ajena
+OK 37: H5 pedido TAKEAWAY
+OK 38: M1 cambio posterior no cambia precio histórico
+OK 39: H16 manager no cierra cuenta
+OK 40: H16 general no cierra cuenta
+OK 41: H16 kitchen no cierra cuenta
+OK 42: H16 cuenta de otro cliente
+OK 43: H16 cuenta TAKEAWAY propia
+OK 44: H16 cierre repetido
+OK 45: H16 consulta ajena
+OK 46: H17 manager no cobra
+OK 47: H17 general no cobra
+OK 48: H17 kitchen no cobra
+OK 49: H17 otherWaiter no cobra
+OK 50: H17 clave requerida
+OK 51: H17 valida cardNumber
+OK 52: H17 valida cardHolder
+OK 53: H17 valida cvv
+OK 54: H17 valida expMonth
+OK 55: H17 valida expYear
+OK 56: H17 valida clientId
+OK 57: H17 tarjeta no admitida
+OK 58: H17 rechazo simulado
+OK 59: H17 reintento misma clave rechazada
+OK 60: H17 pago simultáneo misma clave
+OK 61: H17 pago simultáneo otra clave
+OK 62: H17 pago aprobado
+OK 63: H17 idempotencia después del pago
+OK 64: H17 cuenta pagada nueva clave
+OK 65: H18 comprobante propio
+OK 66: H18 menú editado después del pago
+OK 67: H18 comprobante inmutable
+OK 68: H18 comprobante ajeno
+OK 69: H18 listado paginado
+OK 70: H18 página inválida
+OK 71: H18 PDF
+OK 72: H5 mesa sin asignación
+OK 73: Asignación mesa
+OK 74: H4 pedido de mesero
+OK 75: Mesa con pedido de mesero no se libera
+OK 76: H16 pedido pendiente impide cierre
+OK 77: Código malformado
+OK 78: Código temporal
+OK 79: Resumen código
+OK 80: código consumido una sola vez
+OK 81: Código consumido devuelve conflicto
+OK 82: H16 cierre de mesa entregada
+OK 83: M2 mesa en cobro no recibe nuevos pedidos
+OK 84: H17 mesero cobra mesa
+OK 85: H27 filtro inválido
+OK 86: H27 destinatario inyectado
+OK 87: H27 filtro de módulo
+OK 88: H27 bandeja ajena aislada
+OK 89: H29 seguimiento sucursal
+OK 90: H29 sucursal ajena
+OK 91: H29 estado inválido
+OK 92: H30 cola autorizada
+OK 93: H30 mesero no consulta cocina
+OK 94: H30 sucursal ajena
+OK 95: H30 estado no operativo
+OK 96: No permite entrega directa desde READY
+OK 97: Entrega legacy mantiene comanda READY
+OK 98: Pedido para carrera de correlativo
+OK 99: Cuenta para carrera de correlativo
+OK 100: Pedido para carrera de correlativo
+OK 101: Cuenta para carrera de correlativo
+OK 102: Pago concurrente de cuentas distintas
+OK 103: Pago concurrente de cuentas distintas
+OK 104: Pedido para timeout
+OK 105: Cuenta para timeout
+OK 106: Reintenta pago con intento vencido
+OK 107: Logout
+OK 108: Cookie revocada
+RESULTADO: 108 comprobaciones HTTP/concurrencia aprobadas; además aserciones de persistencia.
+
+
+STATUS
+Prisma schema loaded from backend/prisma/schema.prisma
+Datasource "db": PostgreSQL database "sdlc_h10_test", schema "public" at "127.0.0.1:55440"
+
+15 migrations found in prisma/migrations
+
+Database schema is up to date!
+
+
+DIFF
+No difference detected.
