@@ -45,6 +45,7 @@ model Branch {
   closingTime String @default("22:00") @db.Char(5)
   reservations Reservation[]
   inventoryItems InventoryItem[]
+  inventoryAlerts InventoryAlert[]
 }
 
 model User {
@@ -72,6 +73,8 @@ model User {
   linkCodesCreated OrderLinkCode[]
   clientBills Bill[] @relation("BillClient")
   reservations Reservation[]
+  inventoryMovements InventoryMovement[]
+  resolvedInventoryAlerts InventoryAlert[]
 }
 
 model AuthSession {
@@ -350,8 +353,52 @@ model InventoryItem {
   unit String @db.VarChar(20)
   minStock Int
   currentStock Int
+  movements InventoryMovement[]
+  alerts InventoryAlert[]
 
   @@unique([branchId, name])
+}
+
+enum InventoryMovementType {
+  IN
+  OUT
+}
+
+enum InventoryAlertStatus {
+  ACTIVE
+  RESOLVED
+}
+
+model InventoryMovement {
+  id String @id @default(uuid()) @db.Uuid
+  itemId String @db.Uuid
+  item InventoryItem @relation(fields: [itemId], references: [id], onDelete: Restrict)
+  quantity Int
+  type InventoryMovementType
+  reason String @db.VarChar(200)
+  createdById String @db.Uuid
+  createdBy User @relation(fields: [createdById], references: [id], onDelete: Restrict)
+  createdAt DateTime @default(now())
+
+  @@index([itemId, createdAt])
+}
+
+// H14 necesita resolver alertas existentes; su generación y consulta se incorporan en H15.
+model InventoryAlert {
+  id String @id @default(uuid()) @db.Uuid
+  branchId String @db.Uuid
+  branch Branch @relation(fields: [branchId], references: [id], onDelete: Restrict)
+  itemId String @db.Uuid
+  item InventoryItem @relation(fields: [itemId], references: [id], onDelete: Restrict)
+  currentStock Int
+  minStock Int
+  status InventoryAlertStatus @default(ACTIVE)
+  createdAt DateTime @default(now())
+  resolvedAt DateTime?
+  resolvedByUserId String? @db.Uuid
+  resolvedBy User? @relation(fields: [resolvedByUserId], references: [id], onDelete: Restrict)
+
+  @@index([branchId, status, createdAt])
 }
 
 model Reservation {

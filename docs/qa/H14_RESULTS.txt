@@ -1,0 +1,231 @@
+H14 / issue #45 — Entrega local con Docker
+Fecha: 2026-11-13
+Rama: feature/H14-movimientos-inventario
+Base: develop 98dc732, posterior a los merges H10–H13.
+
+RESULTADOS ACTUALES
+- npm start: Dockerfile construido; PostgreSQL local y backend saludables.
+- Migraciones locales: 14 aplicadas, sin diferencias con el esquema Prisma.
+- Generación Prisma y build: aprobados.
+- H14: 20 escenarios + test padre, 21 pruebas aprobadas.
+- Unitarias: 25. Regresiones H10: 28, H11: 23, H12: 18, H13: 17.
+- Integración: 108 comprobaciones HTTP/concurrencia aprobadas.
+- API real dentro de Docker: 30 comprobaciones aprobadas.
+- El seed preserva las existencias incluso después de una entrada nueva.
+- Prueba de entrada/salida de 1 g conserva el saldo y agrega ambas auditorías.
+- Accesos locales: seis internos y dos clientes de demostración verificados.
+- Postman: 28 solicitudes, 34 scripts válidos. Postman/Newman no ejecutado.
+- Sin conexión o escrituras en Supabase durante esta entrega local.
+- Los datos de la base existente no se restablecieron ni se eliminó su volumen.
+
+COBERTURA H14
+Autenticación; roles/sucursal; cantidad, tipo, motivo e IDs; campos inyectados;
+auditoría del actor; lectura H13; salida exacta e insuficiente; desbordamiento;
+concurrencia IN y OUT; umbral de resolución de alertas; preservación del historial;
+rollback de stock/movimiento/alerta; restricciones de base e índice ACTIVE.
+
+COMANDOS
+npm start
+node backend/scripts/run-qa.cjs ./node_modules/.bin/prisma generate --schema backend/prisma/schema.prisma
+npm run build --workspace backend
+node backend/scripts/run-qa.cjs npm run test:h14 --workspace backend
+npm test --workspace backend
+node backend/scripts/run-qa.cjs npm run test:h10 --workspace backend
+node backend/scripts/run-qa.cjs npm run test:h11 --workspace backend
+node backend/scripts/run-qa.cjs npm run test:h12 --workspace backend
+node backend/scripts/run-qa.cjs npm run test:h13 --workspace backend
+node backend/scripts/run-qa.cjs npm run test:integration --workspace backend
+node backend/scripts/project-db.cjs local seed
+node backend/scripts/export-team-access.cjs
+node backend/test/project-smoke.cjs local --existing-api
+node backend/scripts/project-db.cjs local status
+node backend/scripts/project-db.cjs local diff
+
+SALIDA H14
+
+> test:h14
+> node --test test/h14-integration.test.cjs
+
+TAP version 13
+# Subtest: H14 \#45: transactional inventory movements with PostgreSQL
+    # Subtest: no session or forged identity headers returns 401
+    ok 1 - no session or forged identity headers returns 401
+      ---
+      duration_ms: 22.430185
+      type: 'test'
+      ...
+    # Subtest: customer cannot register movements
+    ok 2 - customer cannot register movements
+      ---
+      duration_ms: 10.21494
+      type: 'test'
+      ...
+    # Subtest: waiter cannot register movements
+    ok 3 - waiter cannot register movements
+      ---
+      duration_ms: 8.586802
+      type: 'test'
+      ...
+    # Subtest: kitchen cannot register movements
+    ok 4 - kitchen cannot register movements
+      ---
+      duration_ms: 9.002552
+      type: 'test'
+      ...
+    # Subtest: rejects invalid quantities, types, reasons, IDs and injected fields without changing stock
+    ok 5 - rejects invalid quantities, types, reasons, IDs and injected fields without changing stock
+      ---
+      duration_ms: 206.556432
+      type: 'test'
+      ...
+    # Subtest: manager creates an audited IN with trimmed reason and H13 reflects stock
+    ok 6 - manager creates an audited IN with trimmed reason and H13 reflects stock
+      ---
+      duration_ms: 51.843899
+      type: 'test'
+      ...
+    # Subtest: OUT permits exact remaining stock and rejects insufficient stock atomically
+    ok 7 - OUT permits exact remaining stock and rejects insufficient stock atomically
+      ---
+      duration_ms: 63.194379
+      type: 'test'
+      ...
+    # Subtest: manager cannot target other branch, fake scope or unassigned branch
+    ok 8 - manager cannot target other branch, fake scope or unassigned branch
+      ---
+      duration_ms: 51.48937
+      type: 'test'
+      ...
+    # Subtest: general manager can select either branch; nonexistent or mismatched resources return 404
+    ok 9 - general manager can select either branch; nonexistent or mismatched resources return 404
+      ---
+      duration_ms: 85.198154
+      type: 'test'
+      ...
+    # Subtest: reason accepts 200 characters; IDs accept uppercase UUIDs
+    ok 10 - reason accepts 200 characters; IDs accept uppercase UUIDs
+      ---
+      duration_ms: 23.803434
+      type: 'test'
+      ...
+    # Subtest: integer overflow returns 400 without persistence changes
+    ok 11 - integer overflow returns 400 without persistence changes
+      ---
+      duration_ms: 19.9612
+      type: 'test'
+      ...
+    # Subtest: two simultaneous OUT requests cannot spend the same remaining units
+    ok 12 - two simultaneous OUT requests cannot spend the same remaining units
+      ---
+      duration_ms: 41.178695
+      type: 'test'
+      ...
+    # Subtest: concurrent IN movements preserve both increments
+    ok 13 - concurrent IN movements preserve both increments
+      ---
+      duration_ms: 50.788676
+      type: 'test'
+      ...
+    # Subtest: IN at or below minimum keeps alert active; strictly above resolves with authenticated actor and time
+    ok 14 - IN at or below minimum keeps alert active; strictly above resolves with authenticated actor and time
+      ---
+      duration_ms: 106.572001
+      type: 'test'
+      ...
+    # Subtest: OUT never resolves an active alert
+    ok 15 - OUT never resolves an active alert
+      ---
+      duration_ms: 26.722242
+      type: 'test'
+      ...
+    # Subtest: concurrent IN requests resolve once without overwriting resolution audit
+    ok 16 - concurrent IN requests resolve once without overwriting resolution audit
+      ---
+      duration_ms: 46.993343
+      type: 'test'
+      ...
+    # Subtest: failure while resolving alert rolls back stock, movement and alert
+    ok 17 - failure while resolving alert rolls back stock, movement and alert
+      ---
+      duration_ms: 31.210207
+      type: 'test'
+      ...
+    # Subtest: foreign key failure in audit rolls back stock update
+    ok 18 - foreign key failure in audit rolls back stock update
+      ---
+      duration_ms: 25.135513
+      type: 'test'
+      ...
+    # Subtest: database enforces positive quantity, nonblank reason and one ACTIVE alert per item
+    ok 19 - database enforces positive quantity, nonblank reason and one ACTIVE alert per item
+      ---
+      duration_ms: 32.130866
+      type: 'test'
+      ...
+    # Subtest: revoked session cannot mutate inventory
+    ok 20 - revoked session cannot mutate inventory
+      ---
+      duration_ms: 17.680973
+      type: 'test'
+      ...
+    1..20
+ok 1 - H14 \#45: transactional inventory movements with PostgreSQL
+  ---
+  duration_ms: 2210.482208
+  type: 'test'
+  ...
+1..1
+# tests 21
+# suites 0
+# pass 21
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 2440.458452
+
+unit
+# tests 25
+# pass 25
+# fail 0
+
+h10
+# tests 28
+# pass 28
+# fail 0
+
+h11
+# tests 23
+# pass 23
+# fail 0
+
+h12
+# tests 18
+# pass 18
+# fail 0
+
+h13
+# tests 17
+# pass 17
+# fail 0
+
+integration
+RESULTADO: 108 comprobaciones HTTP/concurrencia aprobadas; además aserciones de persistencia.
+
+docker-http
+{"target":"local","checks":30,"result":"PASS","stockPreserved":true,"movementsRetained":2,"seedRepeatable":true}
+
+status
+Prisma schema loaded from backend/prisma/schema.prisma
+Datasource "db": PostgreSQL database "sdlc_h10_test", schema "public" at "127.0.0.1:55440"
+
+14 migrations found in prisma/migrations
+
+Database schema is up to date!
+
+diff
+No difference detected.
+
+
+access
+Accesos verificados: 6 internos y 2 clientes de demostración. Texto privado generado.
