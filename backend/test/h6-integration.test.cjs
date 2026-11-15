@@ -9,7 +9,7 @@ const { hashPassword } = require('../dist/auth/credentials');
 
 test('H6 #37: branch kitchen queue with local PostgreSQL', { timeout: 60000 }, async t => {
   const connection = new URL(process.env.DATABASE_URL || 'http://missing');
-  assert.ok(['postgres:', 'postgresql:'].includes(connection.protocol) && ['localhost', '127.0.0.1', '[::1]'].includes(connection.hostname) && connection.pathname.endsWith('_test'), 'Use local PostgreSQL ending in _test');
+  assert.ok(['postgres:', 'postgresql:'].includes(connection.protocol) && ['localhost', '127.0.0.1', '[::1]'].includes(connection.hostname) && process.env.ALLOW_LOCAL_FIXTURES === '1', 'Use the local project connection through run-qa.cjs');
   const db = new PrismaClient(), port = Number(process.env.H6_TEST_PORT || 3330);
   const base = process.env.H6_API_URL || `http://127.0.0.1:${port}/api`, api = new URL(base);
   assert.ok(api.protocol === 'http:' && ['127.0.0.1', 'localhost'].includes(api.hostname));

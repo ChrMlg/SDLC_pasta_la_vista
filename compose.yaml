@@ -27,7 +27,8 @@ services:
     environment:
       DATABASE_URL: postgresql://${POSTGRES_USER:-bistro}:${POSTGRES_PASSWORD:?Configure .env.compose.local con npm start}@db:5432/${POSTGRES_DB:-bistro}?schema=public
       DIRECT_URL: postgresql://${POSTGRES_USER:-bistro}:${POSTGRES_PASSWORD:?Configure .env.compose.local con npm start}@db:5432/${POSTGRES_DB:-bistro}?schema=public
-      LOCAL_DEMO_SEED: ${LOCAL_DEMO_SEED:?Ejecute npm start para generar accesos locales}
+      LOCAL_ACCESS_KEY: ${LOCAL_ACCESS_KEY:?Ejecute npm start para generar accesos locales}
+      LOCAL_ACCESS_VERSION: ${LOCAL_ACCESS_VERSION:-2}
       PORT: 3000
       COOKIE_SECURE: ${COOKIE_SECURE:-false}
     depends_on:

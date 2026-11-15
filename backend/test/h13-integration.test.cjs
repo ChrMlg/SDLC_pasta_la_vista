@@ -10,7 +10,7 @@ const { seedInventoryItems, initialInventoryItems } = require('../prisma/seed-in
 
 test('H13 #44: branch inventory with PostgreSQL', { timeout: 60000 }, async t => {
   const connection = new URL(process.env.DATABASE_URL || 'http://missing');
-  assert.ok(['postgres:', 'postgresql:'].includes(connection.protocol) && ['localhost', '127.0.0.1', '[::1]'].includes(connection.hostname) && connection.pathname.endsWith('_test'), 'Use local PostgreSQL ending in _test');
+  assert.ok(['postgres:', 'postgresql:'].includes(connection.protocol) && ['localhost', '127.0.0.1', '[::1]'].includes(connection.hostname) && process.env.ALLOW_LOCAL_FIXTURES === '1', 'Use the local project connection through run-qa.cjs');
   const db = new PrismaClient();
   const port = Number(process.env.H13_TEST_PORT || 3326);
   const base = `http://127.0.0.1:${port}/api`;

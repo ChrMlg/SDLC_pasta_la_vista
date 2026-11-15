@@ -21,6 +21,30 @@ function loadLocalConfig() {
   return config;
 }
 
+function saveLocalConfig(config) {
+  fs.writeFileSync(configFile, Object.entries(config).map(([key,value]) => `${key}=${value}`).join('\n')+'\n', {mode:0o600});
+  fs.chmodSync(configFile,0o600);
+}
+function migrateLegacyDatabase(config) {
+  if (config.POSTGRES_DB !== 'sdlc_h10_test') return;
+  const args=['compose','-p',project,'--env-file',configFile,'-f',path.join(root,'compose.yaml')];
+  function docker(extra, input) {
+    const result=spawnSync('docker',[...args,...extra],{cwd:root,input,encoding:'utf8'});
+    if(result.status!==0) throw new Error('No se pudo actualizar la configuración de la base existente; no se borraron datos');
+    return result.stdout;
+  }
+  docker(['up','-d','--wait','db']);
+  const psql=['exec','-T','db','psql','-U',config.POSTGRES_USER,'-d','postgres','-v','ON_ERROR_STOP=1','-At'];
+  const names=docker(psql, "SELECT datname FROM pg_database WHERE datname IN ('sdlc_h10_test','bistro');").trim().split('\n');
+  if(names.includes('sdlc_h10_test') && names.includes('bistro')) throw new Error('Existen ambas bases; no se reemplaza ninguna. Revise cuál contiene los datos del proyecto');
+  if(names.includes('sdlc_h10_test')) {
+    docker(['stop','backend']);
+    docker(psql, `SELECT pg_terminate_backend(pid) FROM pg_stat_activity WHERE datname='sdlc_h10_test' AND pid<>pg_backend_pid(); ALTER DATABASE "sdlc_h10_test" RENAME TO "bistro";`);
+  } else if(!names.includes('bistro')) throw new Error('No se encontró la base persistente; no se crea otra automáticamente');
+  config.POSTGRES_DB='bistro';saveLocalConfig(config);
+  console.log('Base persistente actualizada a bistro; mismo volumen y mismos datos.');
+}
+
 function prepare() {
   if (!fs.existsSync(configFile)) {
     const existing = spawnSync('docker', ['volume', 'ls', '--filter', `name=^${project}_postgres_data$`, '--format', '{{.Name}}'], { encoding: 'utf8' });
@@ -30,11 +54,14 @@ function prepare() {
   }
   fs.chmodSync(configFile, 0o600);
   const config = loadLocalConfig();
-  if (!config.LOCAL_DEMO_SEED) {
-    config.LOCAL_DEMO_SEED = randomBytes(32).toString('hex');
-    fs.appendFileSync(configFile, `\nLOCAL_DEMO_SEED=${config.LOCAL_DEMO_SEED}\n`, { mode: 0o600 });
+  if (!config.LOCAL_ACCESS_KEY) {
+    config.LOCAL_ACCESS_KEY = config.LOCAL_DEMO_SEED || randomBytes(32).toString('hex');
+    config.LOCAL_ACCESS_VERSION = config.LOCAL_DEMO_SEED ? '1' : '2';
+    delete config.LOCAL_DEMO_SEED;
+    saveLocalConfig(config);
   }
-  if (!/^[a-f0-9]{64}$/.test(config.LOCAL_DEMO_SEED)) throw new Error('LOCAL_DEMO_SEED inválido; conserve el valor generado');
+  if (!/^[a-f0-9]{64}$/.test(config.LOCAL_ACCESS_KEY)) throw new Error('LOCAL_ACCESS_KEY inválido; conserve el valor generado');
+  migrateLegacyDatabase(config);
   const url = `postgresql://${config.POSTGRES_USER}:${config.POSTGRES_PASSWORD}@127.0.0.1:${config.DB_PORT}/${config.POSTGRES_DB}?schema=public`;
   const backendFile = path.join(root, 'backend/.env');
   const original = fs.existsSync(backendFile) ? fs.readFileSync(backendFile, 'utf8') : '';
@@ -57,8 +84,9 @@ function main() {
   const result = spawnSync('docker', args, { cwd: root, stdio: 'inherit' });
   process.exitCode = result.status ?? 1;
   if (action === 'start' && result.status === 0) {
-    require('./export-demo-access.cjs').exportDemoAccess(root, loadLocalConfig());
-    console.log('Backend listo. Accesos: accesos-demo-local.txt. Postman: importar Local-Demo.postman_collection.json y .env.demo.local desde postman.');
+    const exported = spawnSync(process.execPath, [path.join(root, 'backend/scripts/export-team-access.cjs')], { cwd: root, stdio: 'inherit' });
+    if (exported.status !== 0) process.exitCode = exported.status ?? 1;
+    else console.log('Backend listo. Postman: importar SDLC-Backend.postman_collection.json y SDLC.postman_environment.json desde postman. Pasos y accesos: ACCESOS_LOCALES.md.');
   }
 }
 if (require.main === module) {

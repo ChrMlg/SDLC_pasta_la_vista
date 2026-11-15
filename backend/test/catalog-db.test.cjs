@@ -1,4 +1,4 @@
-// Run only against a dedicated, migrated database whose name ends in _test.
+// Run through run-qa.cjs; fixtures are scoped and cleaned after each test.
 const assert = require('node:assert/strict');
 const { randomUUID } = require('node:crypto');
 const { test } = require('node:test');
@@ -6,8 +6,8 @@ const { test } = require('node:test');
 const testUrl = process.env.CATALOG_TEST_DATABASE_URL;
 if (!testUrl) throw new Error('Set CATALOG_TEST_DATABASE_URL to a dedicated migrated PostgreSQL test database.');
 const url = new URL(testUrl);
-if (!['postgres:', 'postgresql:'].includes(url.protocol) || !decodeURIComponent(url.pathname.slice(1)).endsWith('_test')) {
-  throw new Error('CATALOG_TEST_DATABASE_URL must point to a PostgreSQL database whose name ends in _test.');
+if (!['postgres:', 'postgresql:'].includes(url.protocol) || process.env.ALLOW_LOCAL_FIXTURES !== '1') {
+  throw new Error('Run through run-qa.cjs with the local project connection.');
 }
 const { PrismaClient } = require('@prisma/client');
 const db = new PrismaClient({ datasources: { db: { url: testUrl } } });

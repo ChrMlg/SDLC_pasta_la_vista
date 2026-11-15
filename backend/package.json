@@ -15,13 +15,10 @@
     "test:integration": "node test/integration.cjs",
     "prisma:deploy": "prisma migrate deploy",
     "prisma:seed": "prisma db seed",
-    "db:seed:qa": "node scripts/seed-qa.cjs",
     "test:h10": "node --test test/h10-rules.test.cjs test/h10-integration.test.cjs",
-    "db:seed:h10:qa": "node scripts/seed-h10-qa.cjs",
     "test:h11": "node --test test/h11-rules.test.cjs test/h11-integration.test.cjs",
     "test:h12": "node --test test/h12-integration.test.cjs",
     "test:h13": "node --test test/h13-integration.test.cjs",
-    "db:seed:h13:qa": "node scripts/seed-h13-qa.cjs",
     "test:h14": "node --test test/h14-integration.test.cjs",
     "test:h15": "node --test test/h15-integration.test.cjs",
     "test:h6": "node --test test/h6-integration.test.cjs",
@@ -37,7 +34,7 @@
     "test:h33": "node --test test/h33-integration.test.cjs",
     "test:h34": "node --test test/h34-integration.test.cjs",
     "test:h35": "node --test test/h35-integration.test.cjs",
-    "test:local-demo": "node --test test/local-demo-bootstrap.test.cjs"
+    "test:initial-accounts": "node --test test/initial-accounts.test.cjs"
   },
   "dependencies": {
     "@nestjs/common": "^10.4.0",
@@ -50,6 +47,7 @@
   "devDependencies": {
     "@types/express": "^4.17.21",
     "@types/node": "^22.10.0",
+    "newman": "^6.2.3",
     "prisma": "^5.22.0",
     "typescript": "^5.7.0"
   },

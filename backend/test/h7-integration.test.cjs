@@ -11,7 +11,7 @@ const { NotificationsService } = require('../dist/notifications/notifications.se
 
 test('H7 #38: take and release kitchen tickets with PostgreSQL', { timeout: 60000 }, async t => {
   const connection = new URL(process.env.DATABASE_URL || 'http://missing');
-  assert.ok(['postgres:', 'postgresql:'].includes(connection.protocol) && ['localhost', '127.0.0.1', '[::1]'].includes(connection.hostname) && connection.pathname.endsWith('_test'));
+  assert.ok(['postgres:', 'postgresql:'].includes(connection.protocol) && ['localhost', '127.0.0.1', '[::1]'].includes(connection.hostname) && process.env.ALLOW_LOCAL_FIXTURES === '1');
   const db = new PrismaClient(), port = Number(process.env.H7_TEST_PORT || 3331);
   const base = process.env.H7_API_URL || `http://127.0.0.1:${port}/api`, api = new URL(base);
   assert.ok(api.protocol === 'http:' && ['127.0.0.1', 'localhost'].includes(api.hostname));

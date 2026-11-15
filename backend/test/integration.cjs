@@ -8,8 +8,8 @@ const { PrismaClient } = require('@prisma/client');
 const { hashPassword } = require('../dist/auth/credentials');
 const { NotificationsService } = require('../dist/notifications/notifications.service');
 const url = new URL(process.env.DATABASE_URL || 'http://missing');
-if (!['postgres:', 'postgresql:'].includes(url.protocol) || !['localhost', '127.0.0.1', '::1'].includes(url.hostname) || !url.pathname.endsWith('_test')) {
-  throw new Error('DATABASE_URL debe apuntar a una base PostgreSQL local cuyo nombre termine en _test');
+if (!['postgres:', 'postgresql:'].includes(url.protocol) || !['localhost', '127.0.0.1', '::1'].includes(url.hostname) || process.env.ALLOW_LOCAL_FIXTURES !== '1') {
+  throw new Error('Ejecute mediante run-qa.cjs sobre la conexión local del proyecto');
 }
 const db = new PrismaClient();
 const port = Number(process.env.INTEGRATION_PORT || 3319);
