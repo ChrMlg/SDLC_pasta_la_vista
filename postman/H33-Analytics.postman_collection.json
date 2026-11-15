@@ -1,0 +1,85 @@
+{
+  "info": {
+    "name": "H33 — Platillos más vendidos",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
+    "description": "Seleccionar environment local con cuenta GENERAL_MANAGER. Rango ISO-8601 obligatorio de hasta 366 días. Pagos PAID por fecha createdAt, IVA incluido; cuentas con pedidos anulados excluidas completas. Los pedidos se cuentan una vez por cuenta aunque tenga varios pagos. Colección preparada para ejecución manual."
+  },
+  "item": [
+    {
+      "name": "Login gerente general",
+      "request": {
+        "method": "POST",
+        "url": "{{baseUrl}}/auth/login",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\"email\": \"{{generalEmail}}\", \"password\": \"{{generalPassword}}\"}"
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.response.to.have.status(200);"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "Consultar reporte",
+      "request": {
+        "method": "GET",
+        "url": "{{baseUrl}}/analytics/branches/{{branchId}}/top-dishes?from={{from}}&to={{to}}&limit={{limit}}",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ]
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.response.to.have.status(200);"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "Logout",
+      "request": {
+        "method": "POST",
+        "url": "{{baseUrl}}/auth/logout",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ]
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.response.to.have.status(204);"
+            ]
+          }
+        }
+      ]
+    }
+  ]
+}
