@@ -46,6 +46,7 @@ model Branch {
   reservations Reservation[]
   inventoryItems InventoryItem[]
   inventoryAlerts InventoryAlert[]
+  kitchenTickets KitchenTicket[]
 }
 
 model User {
@@ -75,6 +76,7 @@ model User {
   reservations Reservation[]
   inventoryMovements InventoryMovement[]
   resolvedInventoryAlerts InventoryAlert[]
+  takenKitchenTickets KitchenTicket[]
 }
 
 model AuthSession {
@@ -317,12 +319,28 @@ model OrderItem {
   @@index([orderId])
 }
 
+enum KitchenTicketStatus {
+  PENDING
+  IN_PREPARATION
+  READY
+  CANCELLED
+}
+
 model KitchenTicket {
   id        String      @id @default(uuid()) @db.Uuid
   orderId   String      @unique @db.Uuid
   order     Order       @relation(fields: [orderId], references: [id])
-  status    OrderStatus @default(PENDING)
+  branchId  String @db.Uuid
+  branch    Branch @relation(fields: [branchId], references: [id], onDelete: Restrict)
+  status    KitchenTicketStatus @default(PENDING)
+  takenById String? @db.Uuid
+  takenBy   User? @relation(fields: [takenById], references: [id], onDelete: Restrict)
+  takenAt   DateTime?
+  readyAt   DateTime?
   createdAt DateTime    @default(now())
+  updatedAt DateTime @default(now()) @updatedAt
+
+  @@index([branchId, status, createdAt])
 }
 
 model OrderLinkCode {
