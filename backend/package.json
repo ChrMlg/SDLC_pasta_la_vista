@@ -29,7 +29,8 @@
     "db:project": "node scripts/project-db.cjs",
     "test:h8": "node --test test/h8-integration.test.cjs",
     "test:h9": "node --test test/h9-integration.test.cjs",
-    "test:h23": "node --test test/h23-rules.test.cjs test/h23-integration.test.cjs"
+    "test:h23": "node --test test/h23-rules.test.cjs test/h23-integration.test.cjs",
+    "test:h24": "node --test test/h24-integration.test.cjs"
   },
   "dependencies": {
     "@nestjs/common": "^10.4.0",
