@@ -22,10 +22,9 @@ async function main() {
     from:new Date(now.getTime()-30*86400000).toISOString(),to:new Date(now.getTime()+86400000).toISOString(),limit:'10'};
   for (const account of accounts.users) { values[account.label+'Email']=account.email;values[account.label+'Password']=account.password; }
   const environment={name:'SDLC — Backend local',values:Object.entries(values).map(([key,value])=>({key,value,enabled:true,type:key.endsWith('Password')?'secret':'default'})),_postman_variable_scope:'environment'};
-  const guide=fs.readFileSync(path.join(root,'USO_BACKEND.md'),'utf8');
-  const text=guide+'\n## Accesos verificados de esta instalación\n\n'+
+  const text='# Accesos locales\n\n'+
     '**Archivo privado: no publicar en GitHub.**\n\n'+
-    `API: ${baseUrl}. Base persistente: ${config.POSTGRES_DB}.\n\n`+
+    `API: ${baseUrl}\n\n`+
     verified.map(account=>`### ${account.role} (${account.label})\n\n- Correo: \`${account.email}\`\n- Contraseña: \`${account.password}\`\n- Sucursal: \`${account.branchId || 'Sin sucursal fija'}\`\n`).join('\n');
   for(const [relative,content] of [['postman/SDLC.postman_environment.json',JSON.stringify(environment,null,2)+'\n'],['ACCESOS_LOCALES.md',text]]){
     const file=path.join(root,relative);fs.writeFileSync(file,content,{mode:0o600});fs.chmodSync(file,0o600);
