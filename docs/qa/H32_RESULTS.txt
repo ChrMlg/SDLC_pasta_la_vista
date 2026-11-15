@@ -1,0 +1,94 @@
+H32 - Comparativo de sucursales
+2026-11-15. Build y pruebas PostgreSQL local aprobados.
+Rango máximo 366 días; límites inclusivos sobre Payment.createdAt.
+Modelo real: Payment -> Bill -> Order; IVA incluido en Payment.amount.
+Cuentas anuladas o con pedidos anulados excluidas completas. Sin prorrateos artificiales.
+No se restablece la base; fixtures eliminados al finalizar.
+Reproducir: npm run build --workspace backend
+node backend/scripts/run-qa.cjs npm run test:h32 --workspace backend
+Colección preparada; ejecución Postman/Newman pendiente.
+
+TAP version 13
+# Subtest: H31 \#62: sales metrics
+    # Subtest: session and general manager role
+    ok 1 - session and general manager role
+      ---
+      duration_ms: 24.436832
+      type: 'test'
+      ...
+    # Subtest: invalid and excessive ranges
+    ok 2 - invalid and excessive ranges
+      ---
+      duration_ms: 17.843443
+      type: 'test'
+      ...
+    # Subtest: empty branches are zero and not an error
+    ok 3 - empty branches are zero and not an error
+      ---
+      duration_ms: 14.07523
+      type: 'test'
+      ...
+    # Subtest: sum each payment once and distinct orders without failed/cancelled/outside data
+    ok 4 - sum each payment once and distinct orders without failed/cancelled/outside data
+      ---
+      duration_ms: 17.143606
+      type: 'test'
+      ...
+    # Subtest: inclusive boundaries and equivalent offset dates
+    ok 5 - inclusive boundaries and equivalent offset dates
+      ---
+      duration_ms: 14.462077
+      type: 'test'
+      ...
+    # Subtest: aggregation failure propagates, never masquerades as zero sales
+    ok 6 - aggregation failure propagates, never masquerades as zero sales
+      ---
+      duration_ms: 1.843638
+      type: 'test'
+      ...
+    1..6
+ok 1 - H31 \#62: sales metrics
+  ---
+  duration_ms: 925.373031
+  type: 'test'
+  ...
+# Subtest: H32 \#63: branch comparisons
+    # Subtest: authorization and branch set validation
+    ok 1 - authorization and branch set validation
+      ---
+      duration_ms: 43.559149
+      type: 'test'
+      ...
+    # Subtest: empty comparison has null share
+    ok 2 - empty comparison has null share
+      ---
+      duration_ms: 12.530207
+      type: 'test'
+      ...
+    # Subtest: only selected branches contribute to ratio and totals
+    ok 3 - only selected branches contribute to ratio and totals
+      ---
+      duration_ms: 7.656695
+      type: 'test'
+      ...
+    # Subtest: reuses period validation
+    ok 4 - reuses period validation
+      ---
+      duration_ms: 3.086672
+      type: 'test'
+      ...
+    1..4
+ok 2 - H32 \#63: branch comparisons
+  ---
+  duration_ms: 821.112225
+  type: 'test'
+  ...
+1..2
+# tests 12
+# suites 0
+# pass 12
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 1101.334444
