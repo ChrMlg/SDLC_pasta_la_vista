@@ -304,6 +304,7 @@ model Payment {
 
   @@unique([billId, idempotencyKey])
   @@index([billId, status, createdAt])
+  @@index([status, createdAt, billId])
 }
 
 model ReceiptCounter {
