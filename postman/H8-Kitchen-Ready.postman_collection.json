@@ -1,0 +1,245 @@
+{
+  "info": {
+    "name": "H8 — Platillos listos (#39)",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
+    "description": "Ejecución manual por pasos sobre un pedido propio de prueba. Importar y seleccionar environment local, completar cuenta KITCHEN válida de la sucursal. Consultar pendientes, copiar orderId; tomarlo; consultar preparación y copiar itemId de ese pedido (no usar el itemId de inventario). Repetir paso 06 con cada platillo: el último pasa pedido y comanda a READY. Si ya está tomado, omitir paso 04. Requiere datos/cuentas existentes; la instalación automática de cuentas está pendiente. No ejecutar todo el runner sin configurar IDs. Estas peticiones generan auditoría y notificaciones persistentes."
+  },
+  "item": [
+    {
+      "name": "01 Salud",
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "url": "{{baseUrl}}/health"
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.response.to.have.status(200);"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "02 Iniciar sesión cocina",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "url": "{{baseUrl}}/auth/login",
+        "body": {
+          "mode": "raw",
+          "raw": "{\"email\": \"{{kitchenEmail}}\", \"password\": \"{{kitchenPassword}}\"}"
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.response.to.have.status(200);"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "03 Consultar pendientes",
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "url": "{{baseUrl}}/branches/{{branchId}}/kitchen/orders?status=PENDING"
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.response.to.have.status(200);"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "04 Tomar pedido de prueba",
+      "request": {
+        "method": "PATCH",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "url": "{{baseUrl}}/branches/{{branchId}}/kitchen/orders/{{orderId}}/take",
+        "body": {
+          "mode": "raw",
+          "raw": "{}"
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.response.to.have.status(200);"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "05 Consultar preparación y copiar itemId",
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "url": "{{baseUrl}}/branches/{{branchId}}/kitchen/orders?status=IN_PREPARATION"
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.response.to.have.status(200);"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "06 Marcar un platillo listo (repetir con cada itemId)",
+      "request": {
+        "method": "PATCH",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "url": "{{baseUrl}}/branches/{{branchId}}/kitchen/orders/{{orderId}}/items/{{itemId}}/ready",
+        "body": {
+          "mode": "raw",
+          "raw": "{}"
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.response.to.have.status(200); const body = pm.response.json(); pm.expect(body.isReady).to.eql(true); pm.expect(body.ticketStatus).to.eql(body.orderStatus); pm.expect(body.readyAt).to.be.a('string');"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "07 Repetir el mismo platillo: conflicto",
+      "request": {
+        "method": "PATCH",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "url": "{{baseUrl}}/branches/{{branchId}}/kitchen/orders/{{orderId}}/items/{{itemId}}/ready",
+        "body": {
+          "mode": "raw",
+          "raw": "{}"
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.response.to.have.status(409); pm.expect(['ITEM_ALREADY_READY','TICKET_NOT_IN_PREPARATION']).to.include(pm.response.json().code);"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "08 Consultar listos",
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "url": "{{baseUrl}}/branches/{{branchId}}/kitchen/orders?status=READY"
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.response.to.have.status(200);"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "09 Cerrar sesión",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "url": "{{baseUrl}}/auth/logout",
+        "body": {
+          "mode": "raw",
+          "raw": "{}"
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.response.to.have.status(200);"
+            ]
+          }
+        }
+      ]
+    }
+  ]
+}

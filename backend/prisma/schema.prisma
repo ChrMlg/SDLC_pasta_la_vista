@@ -317,6 +317,8 @@ model OrderItem {
   note      String?         @db.VarChar(500)
   status    OrderItemStatus @default(PENDING)
   isReady   Boolean @default(false)
+  readyAt   DateTime?
+  readyById String? @db.Uuid
 
   @@index([orderId])
 }

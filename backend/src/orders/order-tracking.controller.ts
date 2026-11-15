@@ -1,3 +1,4 @@
+import { KitchenReadyService } from '../kitchen/kitchen-ready.service';
 import { Controller, Get, Param, Patch, Req, UseGuards } from '@nestjs/common';
 import { Prisma, PrismaClient } from '@prisma/client';
 import { VerifiedSessionGuard, type AuthenticatedRequest } from '../common/session';
@@ -12,7 +13,7 @@ const conflict = (message: string) => new OrderError(409, 'ORDER_STATUS_CONFLICT
 @Controller('orders')
 @UseGuards(VerifiedSessionGuard)
 export class OrderTrackingController {
-  constructor(private readonly db: PrismaClient, private readonly notifications: NotificationsService, private readonly kitchen: KitchenActionsService) {}
+  constructor(private readonly ready: KitchenReadyService, private readonly db: PrismaClient, private readonly notifications: NotificationsService, private readonly kitchen: KitchenActionsService) {}
 
   @Get()
   async list(@Req() request: AuthenticatedRequest) {
@@ -42,6 +43,10 @@ export class OrderTrackingController {
     if (user.role === 'KITCHEN' && status === 'IN_PREPARATION') {
       const result = await this.kitchen.change(user.branchId, orderId, 'TAKE', request.body, user);
       return { id: result.orderId, status: result.orderStatus };
+    }
+    if (user.role === 'KITCHEN' && status === 'READY') {
+      const result = await this.ready.mark(user.branchId, orderId, null, request.body, user);
+      return { id: orderId, status: result.orderStatus };
     }
     const expected = expectedPrevious(user.role, status);
     if (!expected) throw new OrderError(403, 'FORBIDDEN', 'Transición no permitida');
