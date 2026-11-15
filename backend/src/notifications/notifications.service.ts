@@ -93,7 +93,10 @@ export class NotificationsService {
 
   async orderDeliveryCommitted(orderId: string, status: 'OUT_FOR_DELIVERY' | 'DELIVERED') {
     const order = await this.db.order.findUnique({ where: { id: orderId }, include: { createdBy: true } });
-    if (!order || order.status !== status) return;
+    if (!order) return;
+    // Una entrega rápida no debe perder el aviso de recogida pendiente de envío.
+    const pickedUp = status === 'OUT_FOR_DELIVERY' && order.pickedUpAt && order.pickedUpById;
+    if (!pickedUp && order.status !== status) return;
     const recipients = new Set<string>();
     if (order.clientId) recipients.add(order.clientId);
     if (order.createdBy.role === 'WAITER' && order.createdBy.branchId === order.branchId) recipients.add(order.createdById);

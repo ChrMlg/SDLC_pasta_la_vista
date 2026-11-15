@@ -218,6 +218,9 @@ model Order {
   createdAt   DateTime        @default(now())
   updatedAt   DateTime        @updatedAt
   clientLinkedAt DateTime?
+  pickedUpAt DateTime?
+  pickedUpById String? @db.Uuid
+  deliveredById String? @db.Uuid
   deliveredAt DateTime?
   items       OrderItem[]
   linkCodes   OrderLinkCode[]
