@@ -1,0 +1,193 @@
+H23 (#54) - Integración con cocina y entrega
+Fecha: 2026-11-14 (America/El_Salvador)
+
+Rama H23 actualizada con H6/H7/H8/H9; develop no fusionado.
+Prisma generado y backend compilado; 19 migraciones disponibles, ninguna pendiente.
+H6/H7/H8/H9/H23: 86 pruebas aprobadas. Unitarias backend: 25.
+Integración general: 109 comprobaciones HTTP aprobadas. H23 sobre Docker: 24 pruebas aprobadas.
+
+Flujos completos comprobados mediante HTTP:
+1. Cliente crea TAKEAWAY, genera cuenta y paga con tarjeta simulada aprobada.
+2. Cocina toma pedido, marca platillos, mesero recoge y confirma entrega.
+3. Cliente consulta elegibilidad y registra reseña; duplicado devuelve 409.
+4. Mesero crea DINE_IN, emite código y cliente confirma vinculación.
+5. Cocina y entrega completan el pedido; cliente registra reseña y otro cliente recibe 404.
+Antes de DELIVERED, la reseña se rechaza incluso si el pedido ya está READY o OUT_FOR_DELIVERY.
+En estos dos recorridos no se escribe DELIVERED directamente en la base.
+Las pruebas aisladas de límites/errores sí usan fixtures para estados y fechas específicos.
+Se conserva el límite inclusivo de 720 horas UTC, permisos y protección contra duplicados concurrentes.
+La limpieza elimina únicamente registros temporales de las pruebas, incluyendo auditorías, pagos y recibos.
+
+Reproducir desde la raíz con Docker activo:
+ npm ci
+ npm start
+ npm run prisma:generate --workspace backend
+ npm run build --workspace backend
+ H23_API_URL=http://127.0.0.1:3000/api node backend/scripts/run-qa.cjs npm run test:h23 --workspace backend
+El ejecutor QA exige base local con nombre terminado en _test.
+
+Postman: importar H23-Reviews.postman_collection.json y seleccionar environment con cuentas e IDs válidos.
+Preparar pedidos propios mediante H7, H8 y H9; para TAKEAWAY pagar antes de cocina.
+Para pedidos de mesero, vincular por código al cliente que reseñará.
+Colecciones preparadas; no ejecutadas en Postman/Newman.
+Pendiente transversal: cuentas demo automáticas y prueba de instalación nueva sin archivos privados.
+
+
+> test:h23
+> node --test test/h23-rules.test.cjs test/h23-integration.test.cjs
+
+TAP version 13
+# Subtest: H23 \#54: customer reviews with local PostgreSQL
+    # Subtest: verified session is mandatory; forged identity headers are ignored
+    ok 1 - verified session is mandatory; forged identity headers are ignored
+      ---
+      duration_ms: 28.263758
+      type: 'test'
+      ...
+    # Subtest: waiter cannot access either endpoint
+    ok 2 - waiter cannot access either endpoint
+      ---
+      duration_ms: 11.404087
+      type: 'test'
+      ...
+    # Subtest: kitchen cannot access either endpoint
+    ok 3 - kitchen cannot access either endpoint
+      ---
+      duration_ms: 10.791649
+      type: 'test'
+      ...
+    # Subtest: manager cannot access either endpoint
+    ok 4 - manager cannot access either endpoint
+      ---
+      duration_ms: 8.983558
+      type: 'test'
+      ...
+    # Subtest: general cannot access either endpoint
+    ok 5 - general cannot access either endpoint
+      ---
+      duration_ms: 9.776139
+      type: 'test'
+      ...
+    # Subtest: missing and another customer orders return indistinguishable 404 errors
+    ok 6 - missing and another customer orders return indistinguishable 404 errors
+      ---
+      duration_ms: 34.790106
+      type: 'test'
+      ...
+    # Subtest: invalid IDs, body types, ratings, comments and identity injection are rejected without writes
+    ok 7 - invalid IDs, body types, ratings, comments and identity injection are rejected without writes
+      ---
+      duration_ms: 90.401907
+      type: 'test'
+      ...
+    # Subtest: eligibility exposes only the specified contract and does not create a review
+    ok 8 - eligibility exposes only the specified contract and does not create a review
+      ---
+      duration_ms: 7.428286
+      type: 'test'
+      ...
+    # Subtest: non-delivered orders are ineligible and cannot be reviewed
+    ok 9 - non-delivered orders are ineligible and cannot be reviewed
+      ---
+      duration_ms: 110.655071
+      type: 'test'
+      ...
+    # Subtest: missing delivery date, future date and expired window return 409 on submission
+    ok 10 - missing delivery date, future date and expired window return 409 on submission
+      ---
+      duration_ms: 78.076989
+      type: 'test'
+      ...
+    # Subtest: unlinked orders return 409 without exposing order details
+    ok 11 - unlinked orders return 409 without exposing order details
+      ---
+      duration_ms: 22.9325
+      type: 'test'
+      ...
+    # Subtest: valid review derives author and branch and returns exactly the issue contract
+    ok 12 - valid review derives author and branch and returns exactly the issue contract
+      ---
+      duration_ms: 57.199138
+      type: 'test'
+      ...
+    # Subtest: rating limits and optional, null, empty or 500-character comments are accepted
+    ok 13 - rating limits and optional, null, empty or 500-character comments are accepted
+      ---
+      duration_ms: 73.413097
+      type: 'test'
+      ...
+    # Subtest: concurrent submissions create exactly one review and return 409 to the rest
+    ok 14 - concurrent submissions create exactly one review and return 409 to the rest
+      ---
+      duration_ms: 42.484797
+      type: 'test'
+      ...
+    # Subtest: eligibility is rechecked at submission instead of trusting an earlier GET
+    ok 15 - eligibility is rechecked at submission instead of trusting an earlier GET
+      ---
+      duration_ms: 18.311628
+      type: 'test'
+      ...
+    # Subtest: transaction rollback removes an inserted review if the write fails afterwards
+    ok 16 - transaction rollback removes an inserted review if the write fails afterwards
+      ---
+      duration_ms: 14.453763
+      type: 'test'
+      ...
+    # Subtest: database rejects invalid ratings, oversize comments and duplicate order reviews
+    ok 17 - database rejects invalid ratings, oversize comments and duplicate order reviews
+      ---
+      duration_ms: 12.210367
+      type: 'test'
+      ...
+    # Subtest: customer TAKEAWAY: real order, approved payment, kitchen, pickup, delivery and review
+    ok 18 - customer TAKEAWAY: real order, approved payment, kitchen, pickup, delivery and review
+      ---
+      duration_ms: 2353.842192
+      type: 'test'
+      ...
+    # Subtest: waiter DINE_IN: real order and code confirmation before kitchen, delivery and review
+    ok 19 - waiter DINE_IN: real order and code confirmation before kitchen, delivery and review
+      ---
+      duration_ms: 169.22378
+      type: 'test'
+      ...
+    # Subtest: logged out session cannot read or submit reviews
+    ok 20 - logged out session cannot read or submit reviews
+      ---
+      duration_ms: 18.765598
+      type: 'test'
+      ...
+    1..20
+ok 1 - H23 \#54: customer reviews with local PostgreSQL
+  ---
+  duration_ms: 3612.780975
+  type: 'test'
+  ...
+# Subtest: H23: exactly 720 UTC hours is eligible; one millisecond later is expired
+ok 2 - H23: exactly 720 UTC hours is eligible; one millisecond later is expired
+  ---
+  duration_ms: 0.693546
+  type: 'test'
+  ...
+# Subtest: H23: equivalent UTC offsets have the same deadline
+ok 3 - H23: equivalent UTC offsets have the same deadline
+  ---
+  duration_ms: 0.107213
+  type: 'test'
+  ...
+# Subtest: H23: missing, invalid or future delivery dates are not eligible
+ok 4 - H23: missing, invalid or future delivery dates are not eligible
+  ---
+  duration_ms: 0.100134
+  type: 'test'
+  ...
+1..4
+# tests 24
+# suites 0
+# pass 24
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 3724.342331
