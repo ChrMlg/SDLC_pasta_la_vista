@@ -12,6 +12,7 @@ const db = new PrismaClient();
 (async () => {
   await seedReservationTables(db, branchIds);
   await seedInventoryItems(db, branchIds);
+  if (process.env.LOCAL_DEMO_SEED) await require('./demo-accounts.cjs').seedDemoAccounts(db, process.env.LOCAL_DEMO_SEED);
   console.log('Datos iniciales H10/H13 preparados; existencias y configuraciones previas conservadas.');
 })().catch(() => {
   console.error('No se pudo completar la inicialización local. Revise migraciones y conexión; no se restablecieron datos.');

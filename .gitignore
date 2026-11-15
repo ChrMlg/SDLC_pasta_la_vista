@@ -10,3 +10,5 @@ dist/
 .*/
 !.github/
 accesos-equipo-privado.txt
+
+accesos-demo-local.txt
