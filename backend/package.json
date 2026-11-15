@@ -36,7 +36,8 @@
     "test:h32": "node --test test/h32-integration.test.cjs",
     "test:h33": "node --test test/h33-integration.test.cjs",
     "test:h34": "node --test test/h34-integration.test.cjs",
-    "test:h35": "node --test test/h35-integration.test.cjs"
+    "test:h35": "node --test test/h35-integration.test.cjs",
+    "test:local-demo": "node --test test/local-demo-bootstrap.test.cjs"
   },
   "dependencies": {
     "@nestjs/common": "^10.4.0",

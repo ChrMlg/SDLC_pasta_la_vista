@@ -30,6 +30,11 @@ function prepare() {
   }
   fs.chmodSync(configFile, 0o600);
   const config = loadLocalConfig();
+  if (!config.LOCAL_DEMO_SEED) {
+    config.LOCAL_DEMO_SEED = randomBytes(32).toString('hex');
+    fs.appendFileSync(configFile, `\nLOCAL_DEMO_SEED=${config.LOCAL_DEMO_SEED}\n`, { mode: 0o600 });
+  }
+  if (!/^[a-f0-9]{64}$/.test(config.LOCAL_DEMO_SEED)) throw new Error('LOCAL_DEMO_SEED inválido; conserve el valor generado');
   const url = `postgresql://${config.POSTGRES_USER}:${config.POSTGRES_PASSWORD}@127.0.0.1:${config.DB_PORT}/${config.POSTGRES_DB}?schema=public`;
   const backendFile = path.join(root, 'backend/.env');
   const original = fs.existsSync(backendFile) ? fs.readFileSync(backendFile, 'utf8') : '';
@@ -51,6 +56,10 @@ function main() {
   args.push(...(action === 'start' ? ['up', '-d', '--build', '--wait', 'db', 'backend'] : action === 'stop' ? ['stop', 'backend', 'db'] : ['logs', '--tail', '100', '-f', 'backend']));
   const result = spawnSync('docker', args, { cwd: root, stdio: 'inherit' });
   process.exitCode = result.status ?? 1;
+  if (action === 'start' && result.status === 0) {
+    require('./export-demo-access.cjs').exportDemoAccess(root, loadLocalConfig());
+    console.log('Backend listo. Accesos: accesos-demo-local.txt. Postman: importar Local-Demo.postman_collection.json y .env.demo.local desde postman.');
+  }
 }
 if (require.main === module) {
   try { main(); } catch (error) { console.error(error.message); process.exitCode = 1; }

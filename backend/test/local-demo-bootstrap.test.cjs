@@ -1,0 +1,33 @@
+const assert=require('node:assert/strict');
+const {test}=require('node:test');
+const {randomBytes,createHash}=require('node:crypto');
+const {spawnSync}=require('node:child_process');
+const {PrismaClient}=require('@prisma/client');
+const {loadProjectConfig,root}=require('../scripts/project-db-config.cjs');
+const {demoAccounts,seedDemoAccounts}=require('../prisma/demo-accounts.cjs');
+
+test('local startup from an empty isolated schema preserves existing accounts on repeated seed',{timeout:120000},async t=>{
+ const config=loadProjectConfig('local'),url=new URL(config.DATABASE_URL);assert.ok(['localhost','127.0.0.1'].includes(url.hostname));
+ const schema='demo_check_'+randomBytes(8).toString('hex'),admin=new PrismaClient({datasources:{db:{url:url.toString()}}});
+ url.searchParams.set('schema',schema);
+ const db=new PrismaClient({datasources:{db:{url:url.toString()}}}),seed=randomBytes(32).toString('hex'),demo=demoAccounts(seed);
+ let created=false;
+ t.after(async()=>{await db.$disconnect();if(created)await admin.$executeRawUnsafe(`DROP SCHEMA "${schema}" CASCADE`);await admin.$disconnect();});
+ await admin.$executeRawUnsafe(`CREATE SCHEMA "${schema}"`);created=true;
+ const env={...process.env,DATABASE_URL:url.toString(),DIRECT_URL:url.toString(),LOCAL_DEMO_SEED:seed};
+ const migrate=spawnSync(process.execPath,[require.resolve('prisma/build/index.js'),'migrate','deploy','--schema','backend/prisma/schema.prisma'],{cwd:root,env,encoding:'utf8'});
+ assert.equal(migrate.status,0,'All migrations must apply to an empty schema');
+ const bootstrap=spawnSync(process.execPath,['backend/prisma/bootstrap.cjs'],{cwd:root,env,encoding:'utf8'});
+ assert.equal(bootstrap.status,0,'Bootstrap must work without team credential files');
+ assert.equal(await db.user.count({where:{id:{in:demo.users.map(u=>u.id)}}}),demo.users.length);
+ assert.ok(await db.menuItem.findUnique({where:{id:demo.dish.id}}));
+ const existing=await db.user.create({data:{email:`existing-${schema}@demo.invalid`,role:'CUSTOMER',passwordHash:'preserved-external-hash'}});
+ const before=await db.user.findMany({orderBy:{id:'asc'}}),hash=rows=>createHash('sha256').update(JSON.stringify(rows)).digest('hex');
+ await seedDemoAccounts(db,seed);
+ assert.equal(hash(await db.user.findMany({orderBy:{id:'asc'}})),hash(before));
+ assert.deepEqual(await db.user.findUnique({where:{id:existing.id}}),existing);
+ assert.equal(await db.menuItem.count({where:{id:demo.dish.id}}),1);
+ await db.user.update({where:{id:demo.users[0].id},data:{passwordHash:'manually-changed'}});
+ await assert.rejects(seedDemoAccounts(db,seed),/no se sobrescribe/);
+ assert.equal((await db.user.findUnique({where:{id:demo.users[0].id}})).passwordHash,'manually-changed');
+});
