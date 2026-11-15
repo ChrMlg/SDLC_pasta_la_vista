@@ -1,0 +1,429 @@
+{
+  "info": {
+    "name": "H25 — Consulta de reseñas por sucursal (#56)",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
+    "description": "Seleccionar environment local y completar cuentas existentes; branchId es la sucursal del mesero, otherBranchId otra sucursal existente. Ejecutar en orden para cambiar sesiones. Las consultas no modifican reseñas; una sucursal sin reseñas devuelve data vacío y total 0. rating entero 1–5 y page positivo, tamaño fijo 10. Preparación automática de cuentas en instalación nueva aún pendiente."
+  },
+  "item": [
+    {
+      "name": "01 Login cliente",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "url": "{{baseUrl}}/auth/login",
+        "body": {
+          "mode": "raw",
+          "raw": "{\"email\": \"{{customerEmail}}\", \"password\": \"{{customerPassword}}\"}"
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.response.to.have.status(200); "
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "02 Primera página y campos públicos",
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "url": "{{baseUrl}}/branches/{{branchId}}/reviews"
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.response.to.have.status(200); const b=pm.response.json(); pm.expect(b.page).to.eql(1); pm.expect(b.pageSize).to.eql(10); pm.expect(b.data.length).to.be.at.most(10); for(const r of b.data) pm.expect(Object.keys(r).sort()).to.eql(['comment','createdAt','id','rating']);"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "03 Segunda página",
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "url": "{{baseUrl}}/branches/{{branchId}}/reviews?page=2"
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.response.to.have.status(200); "
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "04 Filtro por calificación",
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "url": "{{baseUrl}}/branches/{{branchId}}/reviews?rating={{rating}}"
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.response.to.have.status(200); for(const r of pm.response.json().data) pm.expect(r.rating).to.eql(Number(pm.environment.get('rating')));"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "05 Cliente consulta otra sucursal",
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "url": "{{baseUrl}}/branches/{{otherBranchId}}/reviews"
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.response.to.have.status(200); "
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "06 Calificación inválida",
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "url": "{{baseUrl}}/branches/{{branchId}}/reviews?rating=6"
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.response.to.have.status(400); "
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "07 Página inválida",
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "url": "{{baseUrl}}/branches/{{branchId}}/reviews?page=0"
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.response.to.have.status(400); "
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "08 No se acepta branchId en query",
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "url": "{{baseUrl}}/branches/{{branchId}}/reviews?branchId={{otherBranchId}}"
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.response.to.have.status(400); "
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "09 Logout cliente",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "url": "{{baseUrl}}/auth/logout"
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.response.to.have.status(204); "
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "10 Sin sesión",
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "url": "{{baseUrl}}/branches/{{branchId}}/reviews"
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.response.to.have.status(401); "
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "11 Login mesero",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "url": "{{baseUrl}}/auth/login",
+        "body": {
+          "mode": "raw",
+          "raw": "{\"email\": \"{{waiterEmail}}\", \"password\": \"{{waiterPassword}}\"}"
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.response.to.have.status(200); "
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "12 Mesero consulta su sucursal",
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "url": "{{baseUrl}}/branches/{{branchId}}/reviews"
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.response.to.have.status(200); "
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "13 Otra sucursal fuera de alcance",
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "url": "{{baseUrl}}/branches/{{otherBranchId}}/reviews"
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.response.to.have.status(404); "
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "14 Logout mesero",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "url": "{{baseUrl}}/auth/logout"
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.response.to.have.status(204); "
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "15 Login cocina",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "url": "{{baseUrl}}/auth/login",
+        "body": {
+          "mode": "raw",
+          "raw": "{\"email\": \"{{kitchenEmail}}\", \"password\": \"{{kitchenPassword}}\"}"
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.response.to.have.status(200); "
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "16 Cocina sin permiso",
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "url": "{{baseUrl}}/branches/{{branchId}}/reviews"
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.response.to.have.status(403); "
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "17 Logout cocina",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "url": "{{baseUrl}}/auth/logout"
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.response.to.have.status(204); "
+            ]
+          }
+        }
+      ]
+    }
+  ]
+}

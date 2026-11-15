@@ -1,0 +1,113 @@
+H25 (#56) - Consulta de reseñas por sucursal
+Fecha: 2026-11-14 (America/El_Salvador)
+
+GET /api/branches/:branchId/reviews?rating=1..5&page=1
+Roles: CUSTOMER y GENERAL_MANAGER cualquier sucursal existente; WAITER/MANAGER solo su sucursal.
+KITCHEN devuelve 403. Sucursal inexistente o fuera de alcance del personal devuelve 404.
+Página fija de 10, orden createdAt DESC e id ASC.
+Solo se seleccionan id, rating, comment y createdAt; no se incluyen datos del perfil ni IDs de autor/pedido.
+Conteo y página se leen en transacción RepeatableRead para conservar una vista consistente.
+Sin nuevas tablas ni migraciones; no se implementan edición ni eliminación.
+
+Build aprobado. H23/H24/H25: 44 pruebas aprobadas.
+Pruebas: permisos, sesión, filtros inválidos, paginación sin duplicados, orden estable,
+ausencia de datos privados de perfil, inserción concurrente entre conteo y lectura,
+reseña nueva por API H23 y rechazo de rutas de modificación.
+Los fixtures temporales se limpian sin eliminar datos previos del equipo.
+
+Reproducir desde raíz con Docker activo:
+ npm ci
+ npm start
+ npm run prisma:generate --workspace backend
+ npm run build --workspace backend
+ H25_API_URL=http://127.0.0.1:3000/api node backend/scripts/run-qa.cjs npm run test:h25 --workspace backend
+El ejecutor QA exige PostgreSQL local con nombre terminado en _test.
+
+Postman: importar H25-Branch-Reviews.postman_collection.json y H25-Local.postman_environment.json.
+Completar credenciales existentes, sucursal del mesero y otra sucursal; seleccionar environment.
+17 solicitudes con JSON y sintaxis de scripts validados; no ejecutadas en Postman/Newman.
+Pendiente transversal: cuentas demo automáticas e instalación nueva sin archivos privados.
+
+Unitarias backend: 25 aprobadas. H25 en Docker: 11 pruebas aprobadas (10 casos y suite padre).
+
+
+> test:h25
+> node --test test/h25-integration.test.cjs
+
+TAP version 13
+# Subtest: H25 \#56: branch review listing with local PostgreSQL
+    # Subtest: session required, kitchen denied and identity headers ignored
+    ok 1 - session required, kitchen denied and identity headers ignored
+      ---
+      duration_ms: 16.451263
+      type: 'test'
+      ...
+    # Subtest: staff scope, missing branches and customer/general access
+    ok 2 - staff scope, missing branches and customer/general access
+      ---
+      duration_ms: 68.756054
+      type: 'test'
+      ...
+    # Subtest: empty branch and default pagination contract
+    ok 3 - empty branch and default pagination contract
+      ---
+      duration_ms: 3.682489
+      type: 'test'
+      ...
+    # Subtest: invalid rating/page and extra or repeated parameters return 400
+    ok 4 - invalid rating/page and extra or repeated parameters return 400
+      ---
+      duration_ms: 41.500624
+      type: 'test'
+      ...
+    # Subtest: stable date descending/id ascending order across pages of ten, without branch leaks
+    ok 5 - stable date descending/id ascending order across pages of ten, without branch leaks
+      ---
+      duration_ms: 55.088639
+      type: 'test'
+      ...
+    # Subtest: public projection excludes author/order/branch IDs, email and profile fields for every role
+    ok 6 - public projection excludes author/order/branch IDs, email and profile fields for every role
+      ---
+      duration_ms: 44.745295
+      type: 'test'
+      ...
+    # Subtest: exact rating filter affects both total and rows and accepts all ratings
+    ok 7 - exact rating filter affects both total and rows and accepts all ratings
+      ---
+      duration_ms: 73.084538
+      type: 'test'
+      ...
+    # Subtest: a concurrent insert cannot make rows disagree with total within one response
+    ok 8 - a concurrent insert cannot make rows disagree with total within one response
+      ---
+      duration_ms: 43.234212
+      type: 'test'
+      ...
+    # Subtest: H23 creation becomes visible; reads and unsupported updates/deletes preserve review
+    ok 9 - H23 creation becomes visible; reads and unsupported updates/deletes preserve review
+      ---
+      duration_ms: 71.440246
+      type: 'test'
+      ...
+    # Subtest: logout revokes access to the list
+    ok 10 - logout revokes access to the list
+      ---
+      duration_ms: 19.34007
+      type: 'test'
+      ...
+    1..10
+ok 1 - H25 \#56: branch review listing with local PostgreSQL
+  ---
+  duration_ms: 1000.706083
+  type: 'test'
+  ...
+1..1
+# tests 11
+# suites 0
+# pass 11
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 1105.222101
