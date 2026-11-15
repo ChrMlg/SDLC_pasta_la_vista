@@ -1,10 +1,7 @@
-// Carga únicamente el entorno privado de pruebas; nunca utiliza backend/.env.
-const { readFileSync } = require('node:fs');
-const { parseEnv } = require('node:util');
+// Usa la misma conexión local de Compose, sin archivos de conexión por historia.
 const { spawnSync } = require('node:child_process');
-const path = require('node:path');
-const root = path.resolve(__dirname, '../..');
-const values = parseEnv(readFileSync(path.resolve(root, process.env.QA_ENV_FILE || '.env.h10.qa.local'), 'utf8'));
+const { root, loadProjectConfig } = require('./project-db-config.cjs');
+const values = loadProjectConfig('local');
 const connection = new URL(values.DATABASE_URL);
 if (!['postgres:', 'postgresql:'].includes(connection.protocol) || !['localhost', '127.0.0.1', '::1'].includes(connection.hostname) || !connection.pathname.endsWith('_test'))
   throw new Error('La base QA debe ser local y su nombre debe terminar en _test');

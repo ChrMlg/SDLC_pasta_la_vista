@@ -1,0 +1,362 @@
+H15 #46 — Resultados de validación
+Fecha: 2026-11-13
+Entorno: backend NestJS/Prisma y PostgreSQL local de Docker, volumen persistente existente.
+
+BUILD Y ARRANQUE
+npm run build --workspace backend: salida 0.
+npm start: salida 0; backend y PostgreSQL saludables. GET /api/health: 200.
+Compose config --quiet: salida 0. Sin nueva migración de H15.
+
+CONFIGURACIÓN
+Conexión QA derivada de .env.compose.local; backend/.env coincide con ella.
+Sin archivos backend/.env.previous-*. Configuraciones antiguas retiradas.
+Archivos privados ignorados por Git; auditoría de valores privados sin hallazgos.
+Postman: 20 solicitudes, 26 scripts con sintaxis válida; plantilla sin credenciales.
+No se ejecutó Postman/Newman.
+
+DATOS
+La huella de datos del proyecto, movimientos y alertas coincidió antes y después de H15 y las regresiones.
+Las pruebas crean y eliminan únicamente sus fixtures. No se eliminó ninguna base ni volumen.
+Accesos de aplicación: 6 cuentas internas y 2 clientes de demostración verificados.
+
+
+LOCAL-TESTS
+# tests 20
+# suites 0
+# pass 20
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 2920.075763
+
+
+DOCKER-TESTS
+
+> test:h15
+> node --test test/h15-integration.test.cjs
+
+TAP version 13
+# Subtest: H15 \#46: inventory replenishment alerts with PostgreSQL
+    # Subtest: requires a verified session and rejects forged headers
+    ok 1 - requires a verified session and rejects forged headers
+      ---
+      duration_ms: 20.95041
+      type: 'test'
+      ...
+    # Subtest: customer cannot read alerts
+    ok 2 - customer cannot read alerts
+      ---
+      duration_ms: 9.415015
+      type: 'test'
+      ...
+    # Subtest: waiter cannot read alerts
+    ok 3 - waiter cannot read alerts
+      ---
+      duration_ms: 6.596265
+      type: 'test'
+      ...
+    # Subtest: kitchen cannot read alerts
+    ok 4 - kitchen cannot read alerts
+      ---
+      duration_ms: 6.501576
+      type: 'test'
+      ...
+    # Subtest: manager scope and unassigned manager return 404
+    ok 5 - manager scope and unassigned manager return 404
+      ---
+      duration_ms: 23.216539
+      type: 'test'
+      ...
+    # Subtest: missing branch, invalid UUID and unsupported filters follow the error contract
+    ok 6 - missing branch, invalid UUID and unsupported filters follow the error contract
+      ---
+      duration_ms: 33.71255
+      type: 'test'
+      ...
+    # Subtest: empty branches return 200 arrays; listing never generates alerts
+    ok 7 - empty branches return 200 arrays; listing never generates alerts
+      ---
+      duration_ms: 37.009996
+      type: 'test'
+      ...
+    # Subtest: OUT above minimum creates no alert, exact minimum creates one ACTIVE
+    ok 8 - OUT above minimum creates no alert, exact minimum creates one ACTIVE
+      ---
+      duration_ms: 126.340844
+      type: 'test'
+      ...
+    # Subtest: IN below or at minimum generates an alert even when none existed
+    ok 9 - IN below or at minimum generates an alert even when none existed
+      ---
+      duration_ms: 74.268685
+      type: 'test'
+      ...
+    # Subtest: IN above minimum generates no alert; zero threshold alerts only at zero
+    ok 10 - IN above minimum generates no alert; zero threshold alerts only at zero
+      ---
+      duration_ms: 89.853497
+      type: 'test'
+      ...
+    # Subtest: replenishment resolves once with session audit; another depletion creates a new period
+    ok 11 - replenishment resolves once with session audit; another depletion creates a new period
+      ---
+      duration_ms: 129.678828
+      type: 'test'
+      ...
+    # Subtest: listing isolates branches, exposes no account details and has stable newest-first order
+    ok 12 - listing isolates branches, exposes no account details and has stable newest-first order
+      ---
+      duration_ms: 89.902722
+      type: 'test'
+      ...
+    # Subtest: concurrent OUT movements create exactly one ACTIVE alert with no lost stock
+    ok 13 - concurrent OUT movements create exactly one ACTIVE alert with no lost stock
+      ---
+      duration_ms: 232.034702
+      type: 'test'
+      ...
+    # Subtest: concurrent IN movements below minimum create only one alert
+    ok 14 - concurrent IN movements below minimum create only one alert
+      ---
+      duration_ms: 85.667493
+      type: 'test'
+      ...
+    # Subtest: concurrent replenishment and depletion leave alert state consistent with the committed stock
+    ok 15 - concurrent replenishment and depletion leave alert state consistent with the committed stock
+      ---
+      duration_ms: 64.708465
+      type: 'test'
+      ...
+    # Subtest: failed movements do not create or resolve alerts or change stock
+    ok 16 - failed movements do not create or resolve alerts or change stock
+      ---
+      duration_ms: 48.350736
+      type: 'test'
+      ...
+    # Subtest: alert insertion failure rolls back the stock update and audited movement
+    ok 17 - alert insertion failure rolls back the stock update and audited movement
+      ---
+      duration_ms: 40.358285
+      type: 'test'
+      ...
+    # Subtest: partial unique index rejects a duplicate ACTIVE alert
+    ok 18 - partial unique index rejects a duplicate ACTIVE alert
+      ---
+      duration_ms: 39.048646
+      type: 'test'
+      ...
+    # Subtest: logged out session cannot read alerts
+    ok 19 - logged out session cannot read alerts
+      ---
+      duration_ms: 16.086881
+      type: 'test'
+      ...
+    1..19
+ok 1 - H15 \#46: inventory replenishment alerts with PostgreSQL
+  ---
+  duration_ms: 2057.261551
+  type: 'test'
+  ...
+1..1
+# tests 20
+# suites 0
+# pass 20
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 2319.620749
+
+
+
+UNIT
+# tests 25
+# suites 0
+# pass 25
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 471.9796
+
+
+H10
+# tests 28
+# suites 0
+# pass 28
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 3289.331259
+
+
+H11
+# tests 23
+# suites 0
+# pass 23
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 2744.029193
+
+
+H12
+# tests 18
+# suites 0
+# pass 18
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 2412.716454
+
+
+H13
+# tests 17
+# suites 0
+# pass 17
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 2689.836306
+
+
+H14
+# tests 21
+# suites 0
+# pass 21
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 2756.020923
+
+
+INTEGRATION
+
+> test:integration
+> node test/integration.cjs
+
+OK 1: Login customer
+OK 2: Login otherCustomer
+OK 3: Login waiter
+OK 4: Login otherWaiter
+OK 5: Login kitchen
+OK 6: Login otherKitchen
+OK 7: Login manager
+OK 8: Login otherManager
+OK 9: Login general
+OK 10: Health con consulta PostgreSQL
+OK 11: Sin sesión
+OK 12: No se confía identidad en cabeceras
+OK 13: Login incorrecto
+OK 14: Registro rechaza escalación de rol
+OK 15: Registro exige perfil
+OK 16: Registro válido
+OK 17: Correo duplicado
+OK 18: Cuenta desactivada invalida sesión
+OK 19: Cuenta desactivada no inicia sesión
+OK 20: H1 crear platillo
+OK 21: H1 nombre normalizado duplicado
+OK 22: H1 rol customer no escribe
+OK 23: H1 rol waiter no escribe
+OK 24: H1 rol kitchen no escribe
+OK 25: H1 gerente ajeno
+OK 26: H1 precio inválido
+OK 27: H3 menú de sucursal
+OK 28: H3 página inválida
+OK 29: H3 sucursal ajena para personal
+OK 30: H2 concurrencia 200/409
+OK 31: H5 platillo no disponible
+OK 32: H2 rehabilitar
+OK 33: H5 cantidad cero
+OK 34: H5 identidad inyectada
+OK 35: H4 rol incorrecto
+OK 36: H4 sucursal ajena
+OK 37: H5 pedido TAKEAWAY
+OK 38: M1 cambio posterior no cambia precio histórico
+OK 39: H16 manager no cierra cuenta
+OK 40: H16 general no cierra cuenta
+OK 41: H16 kitchen no cierra cuenta
+OK 42: H16 cuenta de otro cliente
+OK 43: H16 cuenta TAKEAWAY propia
+OK 44: H16 cierre repetido
+OK 45: H16 consulta ajena
+OK 46: H17 manager no cobra
+OK 47: H17 general no cobra
+OK 48: H17 kitchen no cobra
+OK 49: H17 otherWaiter no cobra
+OK 50: H17 clave requerida
+OK 51: H17 valida cardNumber
+OK 52: H17 valida cardHolder
+OK 53: H17 valida cvv
+OK 54: H17 valida expMonth
+OK 55: H17 valida expYear
+OK 56: H17 valida clientId
+OK 57: H17 tarjeta no admitida
+OK 58: H17 rechazo simulado
+OK 59: H17 reintento misma clave rechazada
+OK 60: H17 pago simultáneo misma clave
+OK 61: H17 pago simultáneo otra clave
+OK 62: H17 pago aprobado
+OK 63: H17 idempotencia después del pago
+OK 64: H17 cuenta pagada nueva clave
+OK 65: H18 comprobante propio
+OK 66: H18 menú editado después del pago
+OK 67: H18 comprobante inmutable
+OK 68: H18 comprobante ajeno
+OK 69: H18 listado paginado
+OK 70: H18 página inválida
+OK 71: H18 PDF
+OK 72: H5 mesa sin asignación
+OK 73: Asignación mesa
+OK 74: H4 pedido de mesero
+OK 75: Mesa con pedido de mesero no se libera
+OK 76: H16 pedido pendiente impide cierre
+OK 77: Código malformado
+OK 78: Código temporal
+OK 79: Resumen código
+OK 80: código consumido una sola vez
+OK 81: Código consumido devuelve conflicto
+OK 82: H16 cierre de mesa entregada
+OK 83: M2 mesa en cobro no recibe nuevos pedidos
+OK 84: H17 mesero cobra mesa
+OK 85: H27 filtro inválido
+OK 86: H27 destinatario inyectado
+OK 87: H27 filtro de módulo
+OK 88: H27 bandeja ajena aislada
+OK 89: H29 seguimiento sucursal
+OK 90: H29 sucursal ajena
+OK 91: H29 estado inválido
+OK 92: H30 cola autorizada
+OK 93: H30 mesero no consulta cocina
+OK 94: H30 sucursal ajena
+OK 95: H30 estado no operativo
+OK 96: No permite entrega directa desde READY
+OK 97: Entrega legacy mantiene comanda READY
+OK 98: Pedido para carrera de correlativo
+OK 99: Cuenta para carrera de correlativo
+OK 100: Pedido para carrera de correlativo
+OK 101: Cuenta para carrera de correlativo
+OK 102: Pago concurrente de cuentas distintas
+OK 103: Pago concurrente de cuentas distintas
+OK 104: Pedido para timeout
+OK 105: Cuenta para timeout
+OK 106: Reintenta pago con intento vencido
+OK 107: Logout
+OK 108: Cookie revocada
+RESULTADO: 108 comprobaciones HTTP/concurrencia aprobadas; además aserciones de persistencia.
+
+
+
+STATUS
+Prisma schema loaded from backend/prisma/schema.prisma
+Datasource "db": PostgreSQL database "sdlc_h10_test", schema "public" at "127.0.0.1:55440"
+
+14 migrations found in prisma/migrations
+
+Database schema is up to date!

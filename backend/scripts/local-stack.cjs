@@ -35,8 +35,7 @@ function prepare() {
   const original = fs.existsSync(backendFile) ? fs.readFileSync(backendFile, 'utf8') : '';
   const values = parseEnv(original);
   if (values.DATABASE_URL !== url || values.DIRECT_URL !== url || values.PORT !== config.API_PORT) {
-    // Conserva la configuración anterior en privado; solo cambia la conexión activa.
-    if (original) fs.writeFileSync(path.join(root, `backend/.env.previous-${Date.now()}`), original, { mode: 0o600, flag: 'wx' });
+    // Archivo derivado de Compose: no genera copias de configuraciones anteriores.
     Object.assign(values, { DATABASE_URL: url, DIRECT_URL: url, PORT: config.API_PORT, COOKIE_SECURE: config.COOKIE_SECURE || 'false' });
     fs.writeFileSync(backendFile, Object.entries(values).map(([key, value]) => `${key}=${JSON.stringify(value)}`).join('\n') + '\n', { mode: 0o600 });
     fs.chmodSync(backendFile, 0o600);

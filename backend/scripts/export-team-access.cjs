@@ -26,6 +26,7 @@ async function main() {
       'Base del proyecto: PostgreSQL local ejecutado por Docker Compose, con volumen persistente.',
       'Estas credenciales son para iniciar sesión en la aplicación; no dan acceso al panel ni a PostgreSQL.',
       'No hay una web publicada. Cada integrante inicia backend y base local con npm start desde la raíz. Las bases de computadoras distintas no se sincronizan automáticamente.',
+      'Para usar estas mismas cuentas en otra computadora, colocar .env.project.credentials compartido por el equipo en la raíz y ejecutar npm run prisma:generate --workspace backend, npm run build --workspace backend y node backend/scripts/project-db.cjs local seed. Este texto por sí solo no crea las cuentas.',
       'Inicio de sesión: pantalla /login o POST /api/auth/login con email y password.',
       'El rol se obtiene de la cuenta guardada en la base; no se escoge al iniciar sesión.',
       '\nCUENTAS INTERNAS\n', sections.staff.join('\n\n'),
