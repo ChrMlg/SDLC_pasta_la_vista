@@ -1,3 +1,4 @@
+import { PeakHoursService } from './peak-hours.service';
 import { TopDishesService } from './top-dishes.service';
 import { Controller, Get, Param, Query, Req, UseGuards } from '@nestjs/common';
 import { VerifiedSessionGuard, type AuthenticatedRequest } from '../common/session';
@@ -7,7 +8,7 @@ import { SalesMetricsService } from './sales-metrics.service';
 @Controller('analytics')
 @UseGuards(VerifiedSessionGuard)
 export class AnalyticsController {
-  constructor(private readonly topDishes: TopDishesService, private readonly sales: SalesMetricsService) {}
+  constructor(private readonly peaks: PeakHoursService, private readonly topDishes: TopDishesService, private readonly sales: SalesMetricsService) {}
 
   @Get('sales')
   async summary(@Query() query: Record<string, unknown>, @Req() request: AuthenticatedRequest) {
@@ -28,6 +29,12 @@ export class AnalyticsController {
   top(@Param('branchId') branchId: string, @Query() query: Record<string, unknown>, @Req() request: AuthenticatedRequest) {
     requireGeneral(request.user!);
     return this.topDishes.list(branchId, query);
+  }
+
+  @Get('branches/peak-hours')
+  peakHours(@Query() query: Record<string, unknown>, @Req() request: AuthenticatedRequest) {
+    requireGeneral(request.user!);
+    return this.peaks.list(query);
   }
 
 }
