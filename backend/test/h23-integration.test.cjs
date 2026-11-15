@@ -26,9 +26,14 @@ test('H23 #54: customer reviews with local PostgreSQL', { timeout: 60000 }, asyn
       await db.review.deleteMany({ where: { orderId: { in: orderIds } } });
       await db.notification.deleteMany({ where: { userId: { in: userIds } } });
       await db.orderLinkCode.deleteMany({ where: { orderId: { in: orderIds } } });
+      await db.kitchenTicketLog.deleteMany({ where: { ticket: { orderId: { in: orderIds } } } });
       await db.kitchenTicket.deleteMany({ where: { orderId: { in: orderIds } } });
       await db.orderItem.deleteMany({ where: { orderId: { in: orderIds } } });
       await db.order.deleteMany({ where: { id: { in: orderIds } } });
+      await db.receipt.deleteMany({ where: { branchId: { in: [branch, otherBranch] } } });
+      await db.payment.deleteMany({ where: { bill: { branchId: { in: [branch, otherBranch] } } } });
+      await db.bill.deleteMany({ where: { branchId: { in: [branch, otherBranch] } } });
+      await db.receiptCounter.deleteMany({ where: { branchId: { in: [branch, otherBranch] } } });
       await db.menuItem.deleteMany({ where: { branchId: { in: [branch, otherBranch] } } });
       await db.table.deleteMany({ where: { branchId: { in: [branch, otherBranch] } } });
       await db.user.deleteMany({ where: { id: { in: userIds } } });
@@ -175,23 +180,55 @@ test('H23 #54: customer reviews with local PostgreSQL', { timeout: 60000 }, asyn
     await assert.rejects(db.review.create({ data: { ...data, comment: 'a'.repeat(501) } }));
     await db.review.create({ data }); await assert.rejects(db.review.create({ data }), { code: 'P2002' });
   });
-  await t.test('customer self-service order is already linked; delivered fixture can be reviewed without a code', async () => {
+  async function finishKitchenAndDeliver(id) {
+    const kitchenRoute = `/branches/${branch}/kitchen/orders/${id}`;
+    const deliveryRoute = `/branches/${branch}/orders/${id}`;
+    assert.equal((await get(id)).value.canReview, false);
+    await post(id, { rating: 5 }, 'customer', 409);
+    await call('kitchen', 'PATCH', kitchenRoute + '/take', {}, 200);
+    const items = await db.orderItem.findMany({ where: { orderId: id } });
+    assert.ok(items.length > 0);
+    for (const item of items) await call('kitchen', 'PATCH', `${kitchenRoute}/items/${item.id}/ready`, {}, 200);
+    assert.equal((await get(id)).value.canReview, false);
+    await post(id, { rating: 5 }, 'customer', 409);
+    await call('waiter', 'PATCH', deliveryRoute + '/pickup', {}, 200);
+    assert.equal((await get(id)).value.canReview, false);
+    await post(id, { rating: 5 }, 'customer', 409);
+    const delivered = (await call('waiter', 'PATCH', deliveryRoute + '/deliver', {}, 200)).value;
+    const info = (await get(id)).value;
+    assert.equal(info.canReview, true); assert.equal(info.deliveredAt, delivered.deliveredAt);
+    const saved = await db.order.findUniqueOrThrow({ where: { id }, include: { kitchenTicket: true } });
+    assert.equal(saved.deliveredById, users.waiter.id); assert.equal(saved.kitchenTicket.status, 'READY');
+    return delivered;
+  }
+  await t.test('customer TAKEAWAY: real order, approved payment, kitchen, pickup, delivery and review', async () => {
     const dish = await db.menuItem.create({ data: { branchId: branch, name: 'Platillo H23', normalizedName: 'platillo h23', category: 'MAIN_COURSE', price: '10', createdById: users.manager.id } });
     const { value } = await call('customer', 'POST', '/orders/customer', { branchId: branch, type: 'TAKEAWAY', items: [{ dishId: dish.id, quantity: 1 }] }, 201);
     orderIds.push(value.id);
-    const saved = await db.order.findUniqueOrThrow({ where: { id: value.id } }); assert.equal(saved.clientId, users.customer.id);
     assert.equal((await get(value.id)).value.canReview, false);
-    // Cocina todavía pendiente: solo este pedido temporal simula su estado final.
-    await db.order.update({ where: { id: value.id }, data: { status: 'DELIVERED', deliveredAt: new Date(Date.now() - 1000) } });
-    await post(value.id);
+    const bill = (await call('customer', 'POST', `/branches/${branch}/bills`, { orderId: value.id }, 201)).value;
+    const payment = (await call('customer', 'POST', `/bills/${bill.id}/payments`, {
+      cardHolder: 'Cliente Prueba', cardNumber: '4242424242424242', expMonth: 12,
+      expYear: new Date().getUTCFullYear() + 2, cvv: '123',
+    }, 200, { 'idempotency-key': randomUUID() })).value;
+    assert.equal(payment.status, 'PAID');
+    await finishKitchenAndDeliver(value.id);
+    const reviewed = await post(value.id, { rating: 5, comment: 'Pedido para llevar entregado.' });
+    assert.equal(reviewed.value.clientId, users.customer.id);
+    assert.equal(reviewed.value.branchId, branch);
+    await post(value.id, { rating: 5 }, 'customer', 409);
+    await post(value.id, { rating: 5 }, 'otherCustomer', 404);
   });
-  await t.test('waiter order requires existing link-code confirmation before review', async () => {
+  await t.test('waiter DINE_IN: real order and code confirmation before kitchen, delivery and review', async () => {
     const table = await db.table.create({ data: { branchId: branch, number: 1, status: 'OCCUPIED', capacity: 4 } });
-    const row = await order({ createdById: users.waiter.id, type: 'DINE_IN', tableId: table.id, clientId: null, clientLinkedAt: null });
+    const dish = await db.menuItem.create({ data: { branchId: branch, name: 'Pasta mesa H23', normalizedName: 'pasta mesa h23', category: 'MAIN_COURSE', price: '10', createdById: users.manager.id } });
+    const row = (await call('waiter', 'POST', '/orders', { branchId: branch, type: 'DINE_IN', tableId: table.id, items: [{ dishId: dish.id, quantity: 1 }] }, 201)).value;
+    orderIds.push(row.id);
     await post(row.id, { rating: 5 }, 'customer', 409);
     const { value } = await call('waiter', 'POST', `/orders/${row.id}/link-code`, {}, 201);
     await call('customer', 'POST', '/orders/link-code/confirm', { code: value.code }, 201);
-    assert.equal((await get(row.id)).value.canReview, true); await post(row.id);
+    await finishKitchenAndDeliver(row.id);
+    await post(row.id);
     await post(row.id, { rating: 5 }, 'otherCustomer', 404);
   });
   await t.test('logged out session cannot read or submit reviews', async () => {

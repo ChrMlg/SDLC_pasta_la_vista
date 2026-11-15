@@ -47,6 +47,7 @@ model Branch {
   inventoryItems InventoryItem[]
   inventoryAlerts InventoryAlert[]
   reviews Review[]
+  kitchenTickets KitchenTicket[]
 }
 
 model User {
@@ -77,6 +78,8 @@ model User {
   inventoryMovements InventoryMovement[]
   resolvedInventoryAlerts InventoryAlert[]
   reviews Review[]
+  takenKitchenTickets KitchenTicket[]
+  kitchenTicketLogs KitchenTicketLog[]
 }
 
 model AuthSession {
@@ -217,6 +220,9 @@ model Order {
   createdAt   DateTime        @default(now())
   updatedAt   DateTime        @updatedAt
   clientLinkedAt DateTime?
+  pickedUpAt DateTime?
+  pickedUpById String? @db.Uuid
+  deliveredById String? @db.Uuid
   deliveredAt DateTime?
   items       OrderItem[]
   linkCodes   OrderLinkCode[]
@@ -332,16 +338,54 @@ model OrderItem {
   unitPrice Decimal         @db.Decimal(10, 2)
   note      String?         @db.VarChar(500)
   status    OrderItemStatus @default(PENDING)
+  isReady   Boolean @default(false)
+  readyAt   DateTime?
+  readyById String? @db.Uuid
 
   @@index([orderId])
+}
+
+enum KitchenTicketStatus {
+  PENDING
+  IN_PREPARATION
+  READY
+  CANCELLED
 }
 
 model KitchenTicket {
   id        String      @id @default(uuid()) @db.Uuid
   orderId   String      @unique @db.Uuid
   order     Order       @relation(fields: [orderId], references: [id])
-  status    OrderStatus @default(PENDING)
+  branchId  String @db.Uuid
+  branch    Branch @relation(fields: [branchId], references: [id], onDelete: Restrict)
+  status    KitchenTicketStatus @default(PENDING)
+  takenById String? @db.Uuid
+  takenBy   User? @relation(fields: [takenById], references: [id], onDelete: Restrict)
+  takenAt   DateTime?
+  readyAt   DateTime?
   createdAt DateTime    @default(now())
+  updatedAt DateTime @default(now()) @updatedAt
+  logs KitchenTicketLog[]
+
+  @@index([branchId, status, createdAt])
+}
+
+enum KitchenTicketAction {
+  TAKE
+  RELEASE
+  READY
+}
+
+model KitchenTicketLog {
+  id String @id @default(uuid()) @db.Uuid
+  ticketId String @db.Uuid
+  ticket KitchenTicket @relation(fields: [ticketId], references: [id], onDelete: Restrict)
+  action KitchenTicketAction
+  userId String @db.Uuid
+  user User @relation(fields: [userId], references: [id], onDelete: Restrict)
+  createdAt DateTime @default(now())
+
+  @@index([ticketId, createdAt])
 }
 
 model OrderLinkCode {

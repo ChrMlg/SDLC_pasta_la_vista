@@ -139,8 +139,9 @@ export class BillingService {
         const bill = await tx.bill.findUniqueOrThrow({ where: { id: billId }, include: { branch: true, table: true, orders: { include: { items: { include: { dish: { select: { name: true } } } } } } } });
         const items = bill.orders.flatMap(order => order.items.map(item => ({ orderNumber: order.orderNumber, name: item.dish.name,
           quantity: item.quantity, unitPrice: money(item.unitPrice), lineTotal: money(item.unitPrice.mul(item.quantity)) })));
-        await tx.bill.update({ where: { id: billId }, data: { status: 'PAID', paidAt: new Date() } });
-        const result = await tx.payment.update({ where: { id: current.id }, data: { status: 'PAID', completedAt: new Date() } });
+        const paidAt = new Date();
+        await tx.bill.update({ where: { id: billId }, data: { status: 'PAID', paidAt } });
+        const result = await tx.payment.update({ where: { id: current.id }, data: { status: 'PAID', completedAt: paidAt } });
         await tx.$executeRaw`INSERT INTO "ReceiptCounter" ("branchId", "nextNumber") VALUES (${bill.branchId}::uuid, 1) ON CONFLICT ("branchId") DO NOTHING`;
         const counter = await tx.$queryRaw<{ nextNumber: number }[]>`UPDATE "ReceiptCounter" SET "nextNumber" = "nextNumber" + 1 WHERE "branchId" = ${bill.branchId}::uuid RETURNING "nextNumber" - 1 AS "nextNumber"`;
         const sequence = counter[0].nextNumber;
@@ -151,7 +152,7 @@ export class BillingService {
           await tx.table.update({ where: { id: bill.tableId }, data: { status: 'NEEDS_CLEANING' } });
           await tx.tableAssignment.updateMany({ where: { tableId: bill.tableId, validFrom: { lt: new Date() }, OR: [{ validTo: null }, { validTo: { gt: new Date() } }] }, data: { validTo: new Date() } });
         }
-        if (bill.type === 'TAKEAWAY') await tx.kitchenTicket.createMany({ data: bill.orders.map(order => ({ orderId: order.id })), skipDuplicates: true });
+        if (bill.type === 'TAKEAWAY') await tx.kitchenTicket.createMany({ data: bill.orders.map(order => ({ orderId: order.id, branchId: order.branchId, createdAt: paidAt })), skipDuplicates: true });
         return result;
       });
       if (completed.status === 'PAID' && this.notifications) {

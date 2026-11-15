@@ -71,10 +71,14 @@ export class NotificationsService {
   }
 
   // Recibe estados ya confirmados; no implementa las transiciones de Cocina.
-  async kitchenStatusCommitted(orderId: string, status: OrderStatus) {
+  async kitchenStatusCommitted(orderId: string, status: OrderStatus, committedLogId?: string) {
     if (!['IN_PREPARATION', 'READY'].includes(status)) return;
     const order = await this.db.order.findUnique({ where: { id: orderId }, include: { kitchenTicket: true, createdBy: true, bill: true } });
-    if (!order?.kitchenTicket || order.kitchenTicket.status !== status || order.status !== status || (order.type === 'TAKEAWAY' && order.bill?.status !== 'PAID')) return;
+    if (!order?.kitchenTicket || (order.type === 'TAKEAWAY' && order.bill?.status !== 'PAID')) return;
+    // La auditoría confirma el evento aunque el pedido avance antes de enviar el aviso.
+    const committedEvent = !!committedLogId &&
+      await this.db.kitchenTicketLog.count({ where: { id: committedLogId, ticketId: order.kitchenTicket.id, action: status === 'READY' ? 'READY' : 'TAKE' } }) === 1;
+    if (!committedEvent && (order.kitchenTicket.status !== status || order.status !== status)) return;
     const staff = await this.db.user.findMany({ where: { role: 'KITCHEN', branchId: order.branchId, isActive: true }, select: { id: true } });
     const recipients = new Set(staff.map(user => user.id));
     if (order.createdBy.role === 'WAITER' && order.createdBy.branchId === order.branchId) recipients.add(order.createdById);
@@ -89,7 +93,10 @@ export class NotificationsService {
 
   async orderDeliveryCommitted(orderId: string, status: 'OUT_FOR_DELIVERY' | 'DELIVERED') {
     const order = await this.db.order.findUnique({ where: { id: orderId }, include: { createdBy: true } });
-    if (!order || order.status !== status) return;
+    if (!order) return;
+    // Una entrega rápida no debe perder el aviso de recogida pendiente de envío.
+    const pickedUp = status === 'OUT_FOR_DELIVERY' && order.pickedUpAt && order.pickedUpById;
+    if (!pickedUp && order.status !== status) return;
     const recipients = new Set<string>();
     if (order.clientId) recipients.add(order.clientId);
     if (order.createdBy.role === 'WAITER' && order.createdBy.branchId === order.branchId) recipients.add(order.createdById);

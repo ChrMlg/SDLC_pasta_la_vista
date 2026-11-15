@@ -8,5 +8,6 @@ test('kitchen may prepare and mark ready; waiter may deliver only orders out for
   assert.equal(expectedPrevious('KITCHEN', 'DELIVERED'), null);
   assert.equal(expectedPrevious('WAITER', 'IN_PREPARATION'), null);
   assert.equal(expectedPrevious('WAITER', 'READY'), null);
+  assert.equal(expectedPrevious('WAITER', 'OUT_FOR_DELIVERY'), 'READY');
   assert.equal(expectedPrevious('WAITER', 'DELIVERED'), 'OUT_FOR_DELIVERY');
 });

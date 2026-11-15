@@ -192,7 +192,7 @@ async function tests() {
   assert.equal(await db.notification.count({where:{eventKey:`order.delivered:${dine.id}`,userId:users.kitchen.id}}),0);
   // Corrige el endpoint legacy sin implementar el flujo nuevo de M3.
   await req('No permite entrega directa desde READY','waiter','PATCH',`/orders/${order.id}/status/DELIVERED`,undefined,409);
-  await db.order.update({where:{id:order.id},data:{status:'OUT_FOR_DELIVERY'}});
+  await req('Recogida H9 por mesero','waiter','PATCH',`/branches/${branch}/orders/${order.id}/pickup`);
   await req('Entrega legacy mantiene comanda READY','waiter','PATCH',`/orders/${order.id}/status/DELIVERED`);
   assert.equal((await db.kitchenTicket.findUniqueOrThrow({where:{orderId:order.id}})).status,'READY');
   const raceBills=[];
@@ -220,6 +220,7 @@ async function cleanup() {
   await db.receipt.deleteMany({where:{branchId:{in:branchIds}}});
   await db.payment.deleteMany({where:{bill:{branchId:{in:branchIds}}}});
   await db.orderLinkCode.deleteMany({where:{order:{branchId:{in:branchIds}}}});
+  await db.kitchenTicketLog.deleteMany({where:{ticket:{order:{branchId:{in:branchIds}}}}});
   await db.kitchenTicket.deleteMany({where:{order:{branchId:{in:branchIds}}}});
   await db.orderItem.deleteMany({where:{order:{branchId:{in:branchIds}}}});
   await db.order.deleteMany({where:{branchId:{in:branchIds}}});

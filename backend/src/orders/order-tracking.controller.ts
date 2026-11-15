@@ -1,17 +1,17 @@
+import { OrderDeliveryService } from './order-delivery.service';
+import { KitchenReadyService } from '../kitchen/kitchen-ready.service';
 import { Controller, Get, Param, Patch, Req, UseGuards } from '@nestjs/common';
-import { Prisma, PrismaClient } from '@prisma/client';
+import { PrismaClient } from '@prisma/client';
 import { VerifiedSessionGuard, type AuthenticatedRequest } from '../common/session';
-import { NotificationsService } from '../notifications/notifications.service';
 import { OrderError } from './orders.service';
-import { expectedPrevious } from './order-transition';
+import { KitchenActionsService } from '../kitchen/kitchen-actions.service';
 
 const uuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
-const conflict = (message: string) => new OrderError(409, 'ORDER_STATUS_CONFLICT', message);
 
 @Controller('orders')
 @UseGuards(VerifiedSessionGuard)
 export class OrderTrackingController {
-  constructor(private readonly db: PrismaClient, private readonly notifications: NotificationsService) {}
+  constructor(private readonly ready: KitchenReadyService, private readonly db: PrismaClient, private readonly delivery: OrderDeliveryService, private readonly kitchen: KitchenActionsService) {}
 
   @Get()
   async list(@Req() request: AuthenticatedRequest) {
@@ -38,37 +38,18 @@ export class OrderTrackingController {
     const user = request.user!;
     if (user.role !== 'KITCHEN' && user.role !== 'WAITER') throw new OrderError(403, 'FORBIDDEN', 'Sin permiso para actualizar pedidos');
     if (!user.branchId) throw new OrderError(403, 'FORBIDDEN', 'Sucursal requerida');
-    const expected = expectedPrevious(user.role, status);
-    if (!expected) throw new OrderError(403, 'FORBIDDEN', 'Transición no permitida');
-    try {
-      const result = await this.db.$transaction(async tx => {
-        const rows = await tx.$queryRaw<{ id: string; branchId: string; status: string }[]>`
-          SELECT "id", "branchId", "status"::text FROM "Order" WHERE "id" = ${orderId}::uuid FOR UPDATE`;
-        const order = rows[0];
-        if (!order || order.branchId !== user.branchId) throw new OrderError(404, 'NOT_FOUND', 'Pedido no encontrado');
-        const ticket = await tx.kitchenTicket.findUnique({ where: { orderId } });
-        if (!ticket) throw conflict('El pedido aún no está en cocina');
-        if (order.status !== expected || ticket.status !== (status === 'DELIVERED' ? 'READY' : expected)) throw conflict('El estado del pedido cambió');
-        await tx.order.update({ where: { id: orderId }, data: { status: status as 'IN_PREPARATION' | 'READY' | 'DELIVERED',
-          ...(status === 'DELIVERED' ? { deliveredAt: new Date() } : {}) } });
-        if (status === 'IN_PREPARATION' || status === 'READY')
-          await tx.kitchenTicket.update({ where: { orderId }, data: { status } });
-        if (status === 'IN_PREPARATION' || status === 'READY')
-          await tx.orderItem.updateMany({ where: { orderId }, data: { status } });
-        return { id: orderId, status };
-      }, { isolationLevel: Prisma.TransactionIsolationLevel.Serializable });
-      if (status === 'IN_PREPARATION' || status === 'READY') {
-        try { await this.notifications.kitchenStatusCommitted(orderId, status); }
-        catch (error) { console.error('Notification delivery failed after status commit', error); }
-      }
-      if (status === 'DELIVERED') {
-        try { await this.notifications.orderDeliveryCommitted(orderId, status); }
-        catch { console.error('No se pudo registrar el aviso de entrega'); }
-      }
-      return result;
-    } catch (error) {
-      if (error && typeof error === 'object' && 'code' in error && error.code === 'P2034') throw conflict('El estado del pedido cambió');
-      throw error;
+    if (user.role === 'KITCHEN' && status === 'IN_PREPARATION') {
+      const result = await this.kitchen.change(user.branchId, orderId, 'TAKE', request.body, user);
+      return { id: result.orderId, status: result.orderStatus };
     }
+    if (user.role === 'KITCHEN' && status === 'READY') {
+      const result = await this.ready.mark(user.branchId, orderId, null, request.body, user);
+      return { id: orderId, status: result.orderStatus };
+    }
+    if (user.role === 'WAITER' && ['OUT_FOR_DELIVERY', 'DELIVERED'].includes(status)) {
+      const result = await this.delivery.change(user.branchId, orderId, status === 'DELIVERED' ? 'deliver' : 'pickup', request.body, user);
+      return { id: result.orderId, status: result.status };
+    }
+    throw new OrderError(403, 'FORBIDDEN', 'Transición no permitida');
   }
 }

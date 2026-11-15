@@ -2,7 +2,7 @@
   "info": {
     "name": "H23 — Registro de reseñas y calificaciones (#54)",
     "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
-    "description": "Backend local de Docker. Usa cookies de sesión. Completar cuentas y pedidos propios de prueba en el entorno privado. orderId debe estar vinculado al customer, DELIVERED, con deliveredAt dentro de 720 horas y sin reseña. El registro crea una reseña real; usar un pedido de pruebas distinto en cada ejecución. No altera el estado de pedidos. Las suites automatizadas crean y limpian sus propios fixtures; Cocina todavía pendiente. No exportar credenciales al repositorio."
+    "description": "Backend local de Docker. Usa cookies de sesión. Completar cuentas y pedidos propios de prueba en el entorno privado. orderId debe estar vinculado al customer, DELIVERED, con deliveredAt dentro de 720 horas y sin reseña. El registro crea una reseña real; usar un pedido de pruebas distinto en cada ejecución. No altera el estado de pedidos. Preparar pedidos mediante H7 toma, H8 platillos listos y H9 recogida/entrega. TAKEAWAY requiere pago aprobado y DINE_IN de mesero requiere vinculación por código. Las suites automatizadas prueban ambos recorridos reales y limpian sus propios registros. No exportar credenciales al repositorio."
   },
   "item": [
     {
