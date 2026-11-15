@@ -32,7 +32,8 @@
     "test:h23": "node --test test/h23-rules.test.cjs test/h23-integration.test.cjs",
     "test:h24": "node --test test/h24-integration.test.cjs",
     "test:h25": "node --test test/h25-integration.test.cjs",
-    "test:h31": "node --test test/h31-integration.test.cjs"
+    "test:h31": "node --test test/h31-integration.test.cjs",
+    "test:h32": "node --test test/h32-integration.test.cjs"
   },
   "dependencies": {
     "@nestjs/common": "^10.4.0",
