@@ -2,6 +2,9 @@ import { Module } from '@nestjs/common';
 import { VerifiedSessionGuard } from '../common/session';
 import { KitchenController } from './kitchen.controller';
 import { KitchenService } from './kitchen.service';
+import { KitchenActionsService } from './kitchen-actions.service';
+import { NotificationsModule } from '../notifications/notifications.module';
 
-@Module({ controllers: [KitchenController], providers: [KitchenService, VerifiedSessionGuard] })
+@Module({ imports: [NotificationsModule], controllers: [KitchenController],
+  providers: [KitchenService, KitchenActionsService, VerifiedSessionGuard], exports: [KitchenActionsService] })
 export class KitchenModule {}

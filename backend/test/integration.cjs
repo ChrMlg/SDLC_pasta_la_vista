@@ -220,6 +220,7 @@ async function cleanup() {
   await db.receipt.deleteMany({where:{branchId:{in:branchIds}}});
   await db.payment.deleteMany({where:{bill:{branchId:{in:branchIds}}}});
   await db.orderLinkCode.deleteMany({where:{order:{branchId:{in:branchIds}}}});
+  await db.kitchenTicketLog.deleteMany({where:{ticket:{order:{branchId:{in:branchIds}}}}});
   await db.kitchenTicket.deleteMany({where:{order:{branchId:{in:branchIds}}}});
   await db.orderItem.deleteMany({where:{order:{branchId:{in:branchIds}}}});
   await db.order.deleteMany({where:{branchId:{in:branchIds}}});
