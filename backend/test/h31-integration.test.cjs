@@ -1,0 +1,20 @@
+const assert=require('node:assert/strict');
+const {test}=require('node:test');
+const {randomUUID}=require('node:crypto');
+const {analyticsFixture}=require('./support/analytics-fixture.cjs');
+const {SalesMetricsService}=require('../dist/analytics/sales-metrics.service');
+test('H31 #62: sales metrics', {timeout:60000},async t=>{
+ const {db,branches,sale,request,period}=await analyticsFixture(t,31);
+ const route='/analytics/sales?'+period;
+ await t.test('session and general manager role',async()=>{await request(route,401,null);for(const role of ['customer','waiter','kitchen','manager'])await request(route,403,role);});
+ await t.test('invalid and excessive ranges',async()=>{for(const q of ['', 'from=invalid&to=invalid','from=2035-01-02T00:00:00Z&to=2035-01-01T00:00:00Z','from=2035-01-01T00:00:00Z&to=2037-01-01T00:00:00Z','from=2035-02-30T00:00:00Z&to=2035-03-01T00:00:00Z',period+'&from=2035-01-01T00:00:00Z'])await request('/analytics/sales?'+q,422);});
+ await t.test('empty branches are zero and not an error',async()=>{const r=await request(route);for(const id of branches)assert.deepEqual(r.branches.find(b=>b.branchId===id),{branchId:id,branchName:`H31 sucursal ${branches.indexOf(id)}`,totalSales:0,orderCount:0,hasData:false});});
+ const paid=await sale({amount:'10.10',count:2});
+ await db.payment.create({data:{billId:paid.bill.id,userId:paid.payment.userId,idempotencyKey:randomUUID(),status:'PAID',amount:'20.20',cardLast4:'4242',createdAt:paid.payment.createdAt}});
+ await sale({branch:1,amount:'0.01'});
+ for(const status of ['FAILED','REFUNDED','PENDING'])await sale({amount:'999',status});
+ await sale({amount:'999',cancelled:true});await sale({amount:'999',billStatus:'CANCELLED'});await sale({amount:'999',createdAt:'2034-12-31T23:59:59Z'});
+ await t.test('sum each payment once and distinct orders without failed/cancelled/outside data',async()=>{const r=await request(route),a=r.branches.find(b=>b.branchId===branches[0]),zero=r.branches.find(b=>b.branchId===branches[1]);assert.equal(a.totalSales,30.3);assert.equal(a.orderCount,2);assert.equal(zero.hasData,true);assert.equal(zero.totalSales,0.01);assert.equal(zero.orderCount,1);});
+ await t.test('inclusive boundaries and equivalent offset dates',async()=>{const q='from=2035-01-02T06:00:00-06:00&to=2035-01-02T12:00:00Z';const r=await request('/analytics/sales?'+q);assert.equal(r.branches.find(b=>b.branchId===branches[0]).totalSales,30.3);});
+ await t.test('aggregation failure propagates, never masquerades as zero sales',async()=>{const service=new SalesMetricsService({$transaction:async()=>{throw new Error('database unavailable');}});await assert.rejects(service.read({from:new Date(),to:new Date()}),/database unavailable/);});
+});
