@@ -86,7 +86,11 @@ function main() {
   if (action === 'start' && result.status === 0) {
     const exported = spawnSync(process.execPath, [path.join(root, 'backend/scripts/export-team-access.cjs')], { cwd: root, stdio: 'inherit' });
     if (exported.status !== 0) process.exitCode = exported.status ?? 1;
-    else console.log('Backend listo. Postman: importar SDLC-Backend.postman_collection.json y SDLC.postman_environment.json desde postman. Pasos y accesos: ACCESOS_LOCALES.md.');
+    else {
+      const config = loadLocalConfig();
+      console.log(`Backend listo. Healthcheck público: http://127.0.0.1:${config.API_PORT}/api/health`);
+      console.log('Postman: importar SDLC-Backend.postman_collection.json y SDLC.postman_environment.json desde postman. Accesos privados: ACCESOS_LOCALES.md.');
+    }
   }
 }
 if (require.main === module) {

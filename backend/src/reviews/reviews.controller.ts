@@ -1,3 +1,4 @@
+import { ApiBody } from '@nestjs/swagger';
 import { Body, Controller, Get, Param, Post, Query, Req, UseGuards } from '@nestjs/common';
 import { VerifiedSessionGuard, type AuthenticatedRequest } from '../common/session';
 import { inputFields } from '../common/business-error';
@@ -14,6 +15,7 @@ export class ReviewsController {
     return this.reviews.eligibility(id, request.user!);
   }
 
+  @ApiBody({ schema: {"type": "object", "properties": {"rating": {"type": "integer"}, "comment": {"type": "string"}}, "example": {"rating": 5, "comment": "Pedido recibido correctamente."}} })
   @Post('reviews')
   create(@Param('orderId') id: string, @Body() body: unknown, @Req() request: AuthenticatedRequest) {
     return this.reviews.create(id, body, request.user!);

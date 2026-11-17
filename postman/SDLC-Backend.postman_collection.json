@@ -4,14 +4,20 @@
     "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
     "description": "Ejecutar npm ci y npm start con Docker activo. Importar esta colección y SDLC.postman_environment.json generado; seleccionar SDLC — Backend local. Ejecutar carpetas en orden con Collection Runner. Registro completo, sesiones por rol e IDs automáticos. Los 400/401/409 expresamente señalados son validaciones esperadas. La ejecución manual registra operaciones en la base persistente: clientes, platillo, pedidos, pagos del simulador académico, comprobantes y reseñas. Cancela sus reservaciones y compensa IN/OUT de inventario. La mesa pagada queda NEEDS_CLEANING como exige el flujo; requiere una mesa disponible. No crea otra base, no elimina datos existentes. El verificador automatizado usa registros temporales aislados en la misma base y los limpia al finalizar."
   },
+  "variable": [
+    {
+      "key": "baseUrl",
+      "value": "http://127.0.0.1:3000/api",
+      "type": "string"
+    }
+  ],
   "event": [
     {
       "listen": "prerequest",
       "script": {
         "type": "text/javascript",
         "exec": [
-          "for(const key of ['baseUrl','branchId','managerEmail','managerPassword','waiterEmail','waiterPassword','kitchenEmail','kitchenPassword','generalEmail','generalPassword'])if(!pm.environment.get(key))throw new Error('Falta '+key+'. Ejecute npm start, importe SDLC.postman_environment.json y seleccione SDLC — Backend local.');",
-          "const source=pm.request.url.toString()+' '+(pm.request.body && pm.request.body.raw || ''); for(const match of source.matchAll(/\\{\\{([A-Za-z][A-Za-z0-9_]*)\\}\\}/g)){ if(pm.variables.get(match[1])===undefined || pm.variables.get(match[1])===''){ pm.execution.skipRequest(); throw new Error('Falta '+match[1]+'. Ejecute las carpetas anteriores para registrar el cliente y obtener sus IDs; no envíe variables vacías.'); } }"
+          "const source=pm.request.url.toString()+' '+(pm.request.body && pm.request.body.raw || ''); for(const match of source.matchAll(/\\{\\{([A-Za-z][A-Za-z0-9_]*)\\}\\}/g)){ if(pm.variables.get(match[1])===undefined || pm.variables.get(match[1])===''){ pm.execution.skipRequest(); throw new Error('Falta '+match[1]+'. Importe y seleccione SDLC.postman_environment.json generado por npm start; para IDs de operaciones, ejecute las carpetas anteriores.'); } }"
         ]
       }
     }
@@ -39,7 +45,7 @@
                 "type": "text/javascript",
                 "exec": [
                   "pm.test(\"HTTP 200\",()=>pm.response.to.have.status(200));",
-                  ""
+                  "pm.test(\"Backend y PostgreSQL disponibles\",()=>pm.expect(pm.response.json().status).to.eql('ok'));"
                 ]
               }
             },

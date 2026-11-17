@@ -1,3 +1,4 @@
+import { ApiQuery } from '@nestjs/swagger';
 import { Controller, Get, Param, Query, Req, UseGuards } from '@nestjs/common';
 import { PrismaClient, OrderStatus } from '@prisma/client';
 import { VerifiedSessionGuard, type AuthenticatedRequest } from '../common/session';
@@ -11,6 +12,7 @@ const uuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-
 export class OrderNotificationsController {
   constructor(private readonly db: PrismaClient) {}
 
+  @ApiQuery({"name": "status", "required": false, "schema": {"type": "string"}})
   @Get('orders')
   async waiter(@Param('branchId') branchId: string, @Req() request: AuthenticatedRequest, @Query() query: Record<string, unknown>) {
     const user = request.user!;
