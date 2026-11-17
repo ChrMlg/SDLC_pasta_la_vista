@@ -1,3 +1,4 @@
+import { ApiBody, ApiHeader } from '@nestjs/swagger';
 import { Body, Controller, Get, Headers, HttpCode, Param, Post, Query, Req, Res, UseGuards } from '@nestjs/common';
 import type { Response } from 'express';
 import { VerifiedSessionGuard, type AuthenticatedRequest } from '../common/session';
@@ -10,10 +11,13 @@ export class BillingController {
   constructor(private readonly billing: BillingService) {}
   @Get('branches/:branchId/tables/:tableId/billing-summary')
   summary(@Param('branchId') branchId: string, @Param('tableId') tableId: string, @Req() request: AuthenticatedRequest) { return this.billing.summary(branchId, tableId, request.user!); }
+  @ApiBody({ schema: {"type": "object", "properties": {"orderId": {"type": "string"}}, "example": {"orderId": "a1111111-1111-4111-8111-111111111111"}} })
   @Post('branches/:branchId/bills')
   create(@Param('branchId') branchId: string, @Body() body: unknown, @Req() request: AuthenticatedRequest) { return this.billing.create(branchId, body, request.user!); }
   @Get('bills/:billId')
   bill(@Param('billId') billId: string, @Req() request: AuthenticatedRequest) { return this.billing.getBill(billId, request.user!); }
+  @ApiBody({ schema: {"type": "object", "properties": {"cardHolder": {"type": "string"}, "cardNumber": {"type": "string"}, "expMonth": {"type": "integer"}, "expYear": {"type": "integer"}, "cvv": {"type": "string"}}, "example": {"cardHolder": "Cliente Local", "cardNumber": "4242424242424242", "expMonth": 12, "expYear": 2030, "cvv": "123"}} })
+  @ApiHeader({ name: 'Idempotency-Key', required: true, description: 'UUID nuevo por intento; reutilizarlo solo para repetir el mismo pago', schema: { type: 'string', format: 'uuid' } })
   @Post('bills/:billId/payments')
   @HttpCode(200)
   pay(@Param('billId') billId: string, @Headers('idempotency-key') key: string | undefined, @Body() body: unknown, @Req() request: AuthenticatedRequest) { return this.billing.pay(billId, key, body, request.user!); }

@@ -1,4 +1,5 @@
 import 'reflect-metadata';
+import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
 import { PrismaClient } from '@prisma/client';
 import { PrismaModule } from './prisma/prisma.module';
 import { Controller, Get, Module } from '@nestjs/common';
@@ -31,6 +32,20 @@ async function bootstrap() {
   const app = await NestFactory.create(AppModule);
   app.setGlobalPrefix('api');
   app.enableShutdownHooks();
+  const origins = (process.env.CORS_ORIGINS || '').split(',').map(value => value.trim()).filter(Boolean);
+  if (origins.length) app.enableCors({ origin: origins, credentials: true });
+  const document = SwaggerModule.createDocument(app, new DocumentBuilder()
+    .setTitle('Pasta la Vista — API').setVersion('1.0.0')
+    .setDescription('Iniciar sesión en POST /api/auth/login. La sesión usa la cookie HttpOnly bistro_session. Los permisos dependen del rol y la sucursal.')
+    .addCookieAuth('bistro_session').build());
+  document.security = [{ cookie: [] }];
+  for (const path of ['/api/auth/login', '/api/auth/register/customer', '/api/health']) {
+    for (const method of ['get', 'post'] as const) {
+      const operation = document.paths[path]?.[method];
+      if (operation) operation.security = [];
+    }
+  }
+  SwaggerModule.setup('api/docs', app, document, { swaggerOptions: { withCredentials: true } });
   app.useGlobalFilters(new ApiErrorFilter());
   const auth = app.get(AuthService);
   app.use((request: AuthenticatedRequest, _response: unknown, next: (error?: unknown) => void) => {
