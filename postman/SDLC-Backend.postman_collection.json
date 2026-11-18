@@ -220,7 +220,8 @@
                 "type": "text/javascript",
                 "exec": [
                   "pm.test(\"HTTP 200\",()=>pm.response.to.have.status(200));",
-                  "pm.test('Sesión verificada',()=>pm.expect(pm.response.json().userId).to.be.a('string'));"
+                  "pm.test('Sesión verificada',()=>pm.expect(pm.response.json().userId).to.be.a('string'));",
+                  "pm.collectionVariables.set('customerId',pm.response.json().userId);"
                 ]
               }
             }
@@ -549,7 +550,8 @@
                 "type": "text/javascript",
                 "exec": [
                   "pm.test(\"HTTP 200\",()=>pm.response.to.have.status(200));",
-                  "pm.test('Sesión verificada',()=>pm.expect(pm.response.json().userId).to.be.a('string'));"
+                  "pm.test('Sesión verificada',()=>pm.expect(pm.response.json().userId).to.be.a('string'));",
+                  "pm.collectionVariables.set('customerId',pm.response.json().userId);"
                 ]
               }
             }
@@ -1021,7 +1023,8 @@
                 "type": "text/javascript",
                 "exec": [
                   "pm.test(\"HTTP 200\",()=>pm.response.to.have.status(200));",
-                  "pm.test('Sesión verificada',()=>pm.expect(pm.response.json().userId).to.be.a('string'));"
+                  "pm.test('Sesión verificada',()=>pm.expect(pm.response.json().userId).to.be.a('string'));",
+                  "pm.collectionVariables.set('customerId',pm.response.json().userId);"
                 ]
               }
             }
@@ -1137,7 +1140,8 @@
                 "type": "text/javascript",
                 "exec": [
                   "pm.test(\"HTTP 200\",()=>pm.response.to.have.status(200));",
-                  "pm.test('Rechazo esperado',()=>pm.expect(pm.response.json().status).to.eql('FAILED'));"
+                  "pm.test('Rechazo esperado',()=>pm.expect(pm.response.json().status).to.eql('FAILED'));",
+                  "pm.test('El pago FAILED no genera comprobante',()=>pm.expect(pm.response.json().receiptId).to.eql(null));"
                 ]
               }
             }
@@ -1170,7 +1174,8 @@
                 "type": "text/javascript",
                 "exec": [
                   "pm.test(\"HTTP 200\",()=>pm.response.to.have.status(200));",
-                  "pm.collectionVariables.set('receiptId',pm.response.json().receiptId);pm.test('Pago aprobado',()=>pm.expect(pm.response.json().status).to.eql('PAID'));"
+                  "pm.collectionVariables.set('receiptId',pm.response.json().receiptId);pm.test('Pago aprobado',()=>pm.expect(pm.response.json().status).to.eql('PAID'));",
+                  "pm.test('Pago aprobado con recibo',()=>{pm.expect(pm.response.json().status).to.eql('PAID');pm.expect(pm.response.json().receiptId).to.be.a('string');});"
                 ]
               }
             }
@@ -1195,7 +1200,8 @@
                 "type": "text/javascript",
                 "exec": [
                   "pm.test(\"HTTP 200\",()=>pm.response.to.have.status(200));",
-                  ""
+                  "const body=pm.response.json();const receipt=(body.data||[]).find(row=>row.id===pm.collectionVariables.get('receiptId'));",
+                  "pm.test('Contrato H18 y recibo recién emitido',()=>{pm.expect(body.data).to.be.an('array');pm.expect(body.total).to.be.a('number');pm.expect(body.pageSize).to.eql(10);pm.expect(receipt,'El recibo del pago debe estar en la lista').to.exist;pm.expect(receipt.number).to.be.a('string');pm.expect(receipt.issuedAt).to.be.a('string');pm.expect(receipt.branchName).to.be.a('string');pm.expect(receipt.total).to.be.a('string');});"
                 ]
               }
             }
@@ -1220,7 +1226,8 @@
                 "type": "text/javascript",
                 "exec": [
                   "pm.test(\"HTTP 200\",()=>pm.response.to.have.status(200));",
-                  ""
+                  "const receipt=pm.response.json();",
+                  "pm.test('Detalle propio y snapshot inmutable',()=>{pm.expect(receipt.id).to.eql(pm.collectionVariables.get('receiptId'));pm.expect(receipt.clientId).to.eql(pm.collectionVariables.get('customerId'));pm.expect(receipt.paymentId).to.be.a('string');pm.expect(receipt.number).to.be.a('string');pm.expect(receipt.cardLast4).to.eql('4242');pm.expect(receipt.subtotal).to.be.a('string');pm.expect(receipt.discountAmount).to.be.a('string');pm.expect(receipt.taxAmount).to.be.a('string');pm.expect(receipt.total).to.be.a('string');pm.expect(receipt.snapshot).to.be.an('object');pm.expect(receipt.snapshot.items).to.be.an('array').that.is.not.empty;pm.expect(receipt.snapshot.items[0]).to.have.property('unitPrice');pm.expect(receipt.snapshot.items[0]).to.have.property('lineTotal');});"
                 ]
               }
             }
@@ -1245,7 +1252,7 @@
                 "type": "text/javascript",
                 "exec": [
                   "pm.test(\"HTTP 200\",()=>pm.response.to.have.status(200));",
-                  "pm.test('PDF',()=>pm.expect(pm.response.headers.get('Content-Type')).to.include('application/pdf'));"
+                  "pm.test('PDF descargable',()=>{pm.expect(pm.response.headers.get('Content-Type')).to.include('application/pdf');pm.expect(pm.response.headers.get('Content-Disposition')).to.include('.pdf');});"
                 ]
               }
             }
@@ -1741,7 +1748,8 @@
                 "type": "text/javascript",
                 "exec": [
                   "pm.test(\"HTTP 200\",()=>pm.response.to.have.status(200));",
-                  "pm.test('Sesión verificada',()=>pm.expect(pm.response.json().userId).to.be.a('string'));"
+                  "pm.test('Sesión verificada',()=>pm.expect(pm.response.json().userId).to.be.a('string'));",
+                  "pm.collectionVariables.set('customerId',pm.response.json().userId);"
                 ]
               }
             }
@@ -2012,7 +2020,8 @@
                 "type": "text/javascript",
                 "exec": [
                   "pm.test(\"HTTP 200\",()=>pm.response.to.have.status(200));",
-                  "pm.test('Sesión verificada',()=>pm.expect(pm.response.json().userId).to.be.a('string'));"
+                  "pm.test('Sesión verificada',()=>pm.expect(pm.response.json().userId).to.be.a('string'));",
+                  "pm.collectionVariables.set('customerId',pm.response.json().userId);"
                 ]
               }
             }
@@ -2365,7 +2374,8 @@
                 "type": "text/javascript",
                 "exec": [
                   "pm.test(\"HTTP 200\",()=>pm.response.to.have.status(200));",
-                  "pm.test('Sesión verificada',()=>pm.expect(pm.response.json().userId).to.be.a('string'));"
+                  "pm.test('Sesión verificada',()=>pm.expect(pm.response.json().userId).to.be.a('string'));",
+                  "pm.collectionVariables.set('customerId',pm.response.json().userId);"
                 ]
               }
             }
@@ -2901,7 +2911,8 @@
                 "type": "text/javascript",
                 "exec": [
                   "pm.test(\"HTTP 200\",()=>pm.response.to.have.status(200));",
-                  "pm.collectionVariables.set('tableReceiptId',pm.response.json().receiptId);pm.test('Pago aprobado',()=>pm.expect(pm.response.json().status).to.eql('PAID'));"
+                  "pm.collectionVariables.set('tableReceiptId',pm.response.json().receiptId);pm.test('Pago aprobado',()=>pm.expect(pm.response.json().status).to.eql('PAID'));",
+                  "pm.test('Pago aprobado con recibo',()=>{pm.expect(pm.response.json().status).to.eql('PAID');pm.expect(pm.response.json().receiptId).to.be.a('string');});"
                 ]
               }
             }
