@@ -301,6 +301,7 @@ model Payment {
   failureCode String?
   createdAt DateTime @default(now())
   completedAt DateTime?
+  receipt Receipt?
 
   @@unique([billId, idempotencyKey])
   @@index([billId, status, createdAt])
@@ -317,16 +318,22 @@ model Receipt {
   id String @id @default(uuid()) @db.Uuid
   billId String @unique @db.Uuid
   bill Bill @relation(fields: [billId], references: [id])
+  paymentId String @unique @db.Uuid
+  payment Payment @relation(fields: [paymentId], references: [id])
+  clientId String? @db.Uuid
   branchId String @db.Uuid
   branch Branch @relation(fields: [branchId], references: [id])
-  number String @db.VarChar(80)
+  number String @unique @db.VarChar(80)
   sequence Int
+  subtotal Decimal @db.Decimal(12, 2)
+  discountAmount Decimal @db.Decimal(12, 2)
+  taxAmount Decimal @db.Decimal(12, 2)
+  total Decimal @db.Decimal(12, 2)
   snapshot Json
   cardLast4 String @db.Char(4)
-  createdAt DateTime @default(now())
+  issuedAt DateTime @default(now()) @map("createdAt")
 
   @@unique([branchId, sequence])
-  @@unique([branchId, number])
 }
 
 model OrderItem {

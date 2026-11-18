@@ -113,6 +113,7 @@ async function tests() {
   const failedKey = key();
   const declined = await req('H17 rechazo simulado', 'customer', 'POST', `/bills/${bill.id}/payments`, payment('4000000000000002'), 200, failedKey);
   assert.equal(declined.status,'FAILED'); assert.equal(declined.billStatus,'OPEN'); assert.equal(declined.receiptId,null);
+  assert.equal(await db.receipt.count({where:{billId:bill.id}}),0);
   assert.equal(await db.kitchenTicket.count({ where: { orderId: order.id } }), 0);
   await req('H17 reintento misma clave rechazada', 'customer', 'POST', `/bills/${bill.id}/payments`, payment('4000000000000002'), 200, failedKey);
   const paidKey = key(); const startTime = Date.now();
@@ -131,17 +132,36 @@ async function tests() {
   assert.equal(await db.notification.count({where:{eventKey:`order.queued:${order.id}`,userId:users.kitchen.id}}),1);
   assert.equal(await db.notification.count({where:{eventKey:`order.queued:${order.id}`,userId:users.otherKitchen.id}}),0);
   const receipt = await req('H18 comprobante propio', 'customer','GET',`/me/receipts/${approved.receiptId}`);
+  assert.equal(receipt.paymentId,approved.paymentId); assert.equal(receipt.clientId,users.customer.id);
+  assert.equal(receipt.cardLast4,'4242'); assert.equal(receipt.total,bill.total);
+  assert.equal(receipt.subtotal,bill.subtotal); assert.equal(receipt.discountAmount,bill.discountAmount); assert.equal(receipt.taxAmount,bill.taxAmount);
+  assert.equal(receipt.number,`QA-${run}-0-000001`);
   const before = JSON.stringify(receipt.snapshot);
   await req('H18 menú editado después del pago','manager','PATCH',`/branches/${branch}/menu-items/${item.id}`,{name:'Nombre nuevo',price:'30.00'});
   assert.equal(JSON.stringify((await req('H18 comprobante inmutable','customer','GET',`/me/receipts/${approved.receiptId}`)).snapshot),before);
   await req('H18 comprobante ajeno','otherCustomer','GET',`/me/receipts/${approved.receiptId}`,undefined,404);
   const list = await req('H18 listado paginado','customer','GET','/me/receipts?page=1'); assert.equal(list.pageSize,10);assert.equal(list.total,1);
+  assert.deepEqual(list.data,[{id:receipt.id,number:receipt.number,issuedAt:receipt.issuedAt,branchName:'QA 0',total:bill.total}]);
+  assert.deepEqual((await req('H18 segunda página','customer','GET','/me/receipts?page=2')).data,[]);
+  assert.deepEqual((await req('H18 listado ajeno','otherCustomer','GET','/me/receipts')).data,[]);
+  await req('H18 PDF ajeno','otherCustomer','GET',`/me/receipts/${receipt.id}/pdf`,undefined,404);
+  for (const route of ['/me/receipts',`/me/receipts/${receipt.id}`,`/me/receipts/${receipt.id}/pdf`]) {
+    await req('H18 sin sesión',null,'GET',route,undefined,401);
+    await req('H18 rol no permitido','waiter','GET',route,undefined,403);
+  }
   await req('H18 página inválida','customer','GET','/me/receipts?page=0',undefined,422);
-  const pdf = await req('H18 PDF','customer','GET',`/me/receipts/${approved.receiptId}/pdf`); assert.equal(pdf.subarray(0,5).toString(),'%PDF-');
+  const download = await call('H18 PDF','customer','GET',`/me/receipts/${approved.receiptId}/pdf`);
+  assert.equal(download.response.headers.get('content-type'),'application/pdf');
+  const pdf = download.value; assert.equal(pdf.subarray(0,5).toString(),'%PDF-');
   // Exporta solo si se solicita explícitamente para inspección local; no contiene secretos.
   if(process.env.QA_PDF_PATH) require('node:fs').writeFileSync(process.env.QA_PDF_PATH,pdf);
   assert.equal(JSON.stringify(await db.payment.findMany({where:{billId:bill.id}})).includes('4242424242424242'),false);
   const table=await db.table.create({data:{branchId:branch,number:1,status:'AVAILABLE'}});
+  const anonymousBill=await db.bill.create({data:{branchId:branch,tableId:table.id,type:'DINE_IN',subtotal:'1.00',tax:'0.13',total:'1.13'}});
+  const anonymous=await req('H18 cobro sin cliente','waiter','POST',`/bills/${anonymousBill.id}/payments`,payment(),200,key());
+  await req('H18 comprobante sin cliente','customer','GET',`/me/receipts/${anonymous.receiptId}`,undefined,404);
+  assert.equal((await req('H18 listado excluye cuentas sin cliente','customer','GET','/me/receipts')).total,1);
+  await db.table.update({where:{id:table.id},data:{status:'AVAILABLE'}});
   await req('H5 mesa sin asignación','customer','POST','/orders/customer',{...takeaway,type:'DINE_IN',tableId:table.id},409);
   await req('Asignación mesa','customer','POST',`/branches/${branch}/tables/${table.id}/select`,undefined,201);
   const dine=await req('H4 pedido de mesero','waiter','POST','/orders',{...takeaway,type:'DINE_IN',tableId:table.id},201);
