@@ -31,6 +31,15 @@ async function seedReservationTables(db, branchIds) {
   });
 }
 
+async function seedLoyaltyRule(db) {
+  // El valor inicial es provisional y solo se aplica al crear por primera vez.
+  await db.loyaltyRule.upsert({
+    where: { id: 'GLOBAL' },
+    create: { id: 'GLOBAL', conversionRate: '1.0000', updatedById: 'SYSTEM' },
+    update: {},
+  });
+}
+
 if (require.main === module) {
   const db = new PrismaClient();
   const scope = process.env.SEED_SCOPE || 'reservations';

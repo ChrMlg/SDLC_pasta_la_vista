@@ -260,6 +260,25 @@ model Review {
   @@index([branchId, createdAt])
 }
 
+model LoyaltyRule {
+  id             String   @id @default("GLOBAL") @db.VarChar(16)
+  conversionRate Decimal  @db.Decimal(10, 4)
+  updatedById    String   @db.VarChar(80)
+  updatedAt      DateTime @default(now()) @updatedAt
+}
+
+model LoyaltyBenefit {
+  id             String   @id @default(uuid()) @db.Uuid
+  name           String   @db.VarChar(100)
+  pointsRequired Int
+  discountValue  Decimal  @db.Decimal(10, 2)
+  isActive       Boolean  @default(true)
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @default(now()) @updatedAt
+
+  @@index([isActive, pointsRequired, id])
+}
+
 enum PaymentStatus {
   PENDING
   PAID
