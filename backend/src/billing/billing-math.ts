@@ -4,6 +4,11 @@ const cents = (value: string): bigint => {
 };
 const usd = (value: bigint): string => `${value / 100n}.${String(value % 100n).padStart(2, '0')}`;
 
+const receiptPrefixes = new Map([['CENTRO', 'CEN'], ['NORTE', 'BAM'], ['JARDIN', 'RAM']]);
+export function receiptNumber(branchCode: string, sequence: number): string {
+  return `${receiptPrefixes.get(branchCode) ?? branchCode}-${String(sequence).padStart(6, '0')}`;
+}
+
 export function calculateTotals(amounts: string[], discount = '0.00') {
   const subtotal = amounts.reduce((sum, amount) => sum + cents(amount), 0n);
   const discountCents = cents(discount);

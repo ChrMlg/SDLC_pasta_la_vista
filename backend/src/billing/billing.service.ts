@@ -1,7 +1,7 @@
 import { Prisma, PrismaClient } from '@prisma/client';
 import type { Session } from '../menu/menu.service';
 import { validatePayment } from './dto/payment.dto';
-import { calculateTotals } from './billing-math';
+import { calculateTotals, receiptNumber } from './billing-math';
 import type { NotificationsService } from '../notifications/notifications.service';
 
 const uuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
@@ -23,7 +23,9 @@ const serializeBill = (bill: Prisma.BillGetPayload<{ include: { orders: { select
   clientId: bill.clientId, discountAmount: money(bill.discount), taxAmount: money(bill.tax), subtotal: money(bill.subtotal), discount: money(bill.discount), tax: money(bill.tax), total: money(bill.total),
   orderIds: bill.orders?.map((o: { id: string }) => o.id) ?? [], createdAt: bill.createdAt.toISOString(), paidAt: bill.paidAt?.toISOString() ?? null });
 const serializeReceipt = (receipt: Prisma.ReceiptGetPayload<Record<string, never>>) => ({ id: receipt.id, billId: receipt.billId, branchId: receipt.branchId, number: receipt.number,
-  cardLast4: receipt.cardLast4, snapshot: receipt.snapshot, createdAt: receipt.createdAt.toISOString() });
+  paymentId: receipt.paymentId, clientId: receipt.clientId, subtotal: money(receipt.subtotal), discountAmount: money(receipt.discountAmount),
+  taxAmount: money(receipt.taxAmount), total: money(receipt.total), cardLast4: receipt.cardLast4, snapshot: receipt.snapshot,
+  issuedAt: receipt.issuedAt.toISOString(), createdAt: receipt.issuedAt.toISOString() });
 
 export class BillingService {
   constructor(private db: PrismaClient, private wait: (ms: number) => Promise<void> = ms => new Promise(resolve => setTimeout(resolve, ms)), private notifications?: Pick<NotificationsService, 'orderQueued'>) {}
@@ -146,7 +148,8 @@ export class BillingService {
         const counter = await tx.$queryRaw<{ nextNumber: number }[]>`UPDATE "ReceiptCounter" SET "nextNumber" = "nextNumber" + 1 WHERE "branchId" = ${bill.branchId}::uuid RETURNING "nextNumber" - 1 AS "nextNumber"`;
         const sequence = counter[0].nextNumber;
         if (sequence > 999999) fail(409, 'RECEIPT_SEQUENCE_EXHAUSTED', 'Correlativo agotado');
-        await tx.receipt.create({ data: { billId, branchId: bill.branchId, sequence, number: `${bill.branch.code}-${String(sequence).padStart(6, '0')}`,
+        await tx.receipt.create({ data: { billId, branchId: bill.branchId, sequence, number: receiptNumber(bill.branch.code, sequence),
+          paymentId: current.id, clientId: bill.clientId, subtotal: bill.subtotal, discountAmount: bill.discount, taxAmount: bill.tax, total: bill.total,
           cardLast4: last4, snapshot: { branchName: bill.branch.name, tableNumber: bill.table?.number ?? null, type: bill.type, items, subtotal: money(bill.subtotal), discount: money(bill.discount), tax: money(bill.tax), total: money(bill.total) } } });
         if (bill.tableId) {
           await tx.table.update({ where: { id: bill.tableId }, data: { status: 'NEEDS_CLEANING' } });
@@ -185,7 +188,7 @@ export class BillingService {
   async receipt(branchId: string, receiptId: string, session: Session, mine = false) {
     validId(receiptId, 'receiptId'); if (!mine) { validId(branchId, 'branchId'); staffBranch(session, branchId); }
     else if (session.role !== 'CUSTOMER') fail(403, 'FORBIDDEN', 'Sin permiso');
-    const receipt = await this.db.receipt.findUnique({ where: { id: receiptId }, include: { bill: { include: { orders: { select: { clientId: true } } } } } });
+    const receipt = await this.db.receipt.findUnique({ where: { id: receiptId }, include: { bill: { select: { clientId: true } } } });
     if (!receipt || (!mine && receipt.branchId !== branchId) || (mine && receipt.bill.clientId !== session.userId)) fail(404, 'NOT_FOUND', 'Comprobante no encontrado');
     return serializeReceipt(receipt);
   }
@@ -196,12 +199,12 @@ export class BillingService {
     if (!Number.isSafeInteger(page) || page < 1 || page > 100000) fail(422, 'INVALID_FIELD', 'Página inválida', 'page');
     const where = { bill: { clientId: session.userId } };
     const [receipts, total] = await this.db.$transaction([
-      this.db.receipt.findMany({ where, orderBy: [{ createdAt: 'desc' }, { id: 'asc' }], take: 10, skip: (page - 1) * 10 }),
+      this.db.receipt.findMany({ where, orderBy: [{ issuedAt: 'desc' }, { id: 'asc' }], take: 10, skip: (page - 1) * 10 }),
       this.db.receipt.count({ where }),
     ]);
     return { data: receipts.map(receipt => {
-      const snapshot = receipt.snapshot as { branchName?: string; total: string };
-      return { ...serializeReceipt(receipt), issuedAt: receipt.createdAt.toISOString(), branchName: snapshot.branchName ?? null, total: snapshot.total };
+      const snapshot = receipt.snapshot as { branchName?: string };
+      return { id: receipt.id, number: receipt.number, issuedAt: receipt.issuedAt.toISOString(), branchName: snapshot.branchName ?? null, total: money(receipt.total) };
     }), total, page, pageSize: 10 };
   }
 }
