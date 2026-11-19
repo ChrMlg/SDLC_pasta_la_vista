@@ -1,4 +1,4 @@
-import { Body, Controller, Get, Param, Patch, Post, Put, Req, UseGuards } from '@nestjs/common';
+import { Body, Controller, Get, Param, Patch, Post, Put, Query, Req, UseGuards } from '@nestjs/common';
 import { VerifiedSessionGuard, type AuthenticatedRequest } from '../common/session';
 import { LoyaltyService } from './loyalty.service';
 
@@ -41,5 +41,21 @@ export class CheckoutBenefitsController {
   @Get()
   active(@Req() request: AuthenticatedRequest) {
     return this.loyalty.listActiveBenefits(request.user!);
+  }
+}
+
+@Controller('me/loyalty')
+@UseGuards(VerifiedSessionGuard)
+export class CustomerLoyaltyController {
+  constructor(private readonly loyalty: LoyaltyService) {}
+
+  @Get('balance')
+  balance(@Req() request: AuthenticatedRequest) {
+    return this.loyalty.balance(request.user!);
+  }
+
+  @Get('history')
+  history(@Req() request: AuthenticatedRequest, @Query('page') page?: string) {
+    return this.loyalty.history(request.user!, page);
   }
 }

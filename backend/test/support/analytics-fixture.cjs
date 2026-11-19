@@ -49,5 +49,5 @@ exports.analyticsFixture = async function(t, story) {
     const response=await fetch(base+route,{headers:role?{cookie:cookies[role]}:{},signal:AbortSignal.timeout(10000)}),body=await response.json();
     assert.equal(response.status,expected,JSON.stringify(body));if(expected>=400)assert.deepEqual(Object.keys(body).sort(),['code','field','message']);return body;
   }
-  return {db,branches,users,dishes,sale,request,period};
+  return {db,branches,users,cookies,dishes,sale,request,period};
 };

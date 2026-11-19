@@ -268,6 +268,7 @@ model LoyaltyRule {
 }
 
 model LoyaltyBenefit {
+  redemptions    LoyaltyRedemption[]
   id             String   @id @default(uuid()) @db.Uuid
   name           String   @db.VarChar(100)
   pointsRequired Int
@@ -287,6 +288,9 @@ enum PaymentStatus {
 }
 
 model Bill {
+  redemptionId String? @unique @db.Uuid
+  redemption LoyaltyRedemption? @relation("ActiveRedemption", fields: [redemptionId], references: [id], onDelete: Restrict)
+  redemptions LoyaltyRedemption[] @relation("BillRedemptions")
   clientId String? @db.Uuid
   client User? @relation("BillClient", fields: [clientId], references: [id], onDelete: Restrict)
   id String @id @default(uuid()) @db.Uuid
@@ -310,6 +314,7 @@ model Bill {
 }
 
 model Payment {
+  redemption LoyaltyRedemption?
   id String @id @default(uuid()) @db.Uuid
   billId String @db.Uuid
   bill Bill @relation(fields: [billId], references: [id])
@@ -336,6 +341,7 @@ enum LoyaltyTransactionType {
 }
 
 model LoyaltyAccount {
+  redemptions LoyaltyRedemption[]
   id           String   @id @default(uuid()) @db.Uuid
   customerId   String   @unique @db.Uuid
   customer     User     @relation(fields: [customerId], references: [id], onDelete: Restrict)
@@ -346,6 +352,7 @@ model LoyaltyAccount {
 }
 
 model LoyaltyTransaction {
+  redemption LoyaltyRedemption? @relation(fields: [redemptionId], references: [id], onDelete: Restrict)
   id           String                 @id @default(uuid()) @db.Uuid
   accountId    String                 @db.Uuid
   account      LoyaltyAccount         @relation(fields: [accountId], references: [id], onDelete: Restrict)
@@ -360,6 +367,35 @@ model LoyaltyTransaction {
 
   @@unique([paymentId, orderId])
   @@index([accountId, createdAt(sort: Desc)])
+}
+
+enum LoyaltyRedemptionStatus {
+  PENDING
+  CONFIRMED
+  RELEASED
+}
+
+model LoyaltyRedemption {
+  id             String @id @default(uuid()) @db.Uuid
+  accountId      String @db.Uuid
+  account        LoyaltyAccount @relation(fields: [accountId], references: [id], onDelete: Restrict)
+  benefitId      String @db.Uuid
+  benefit        LoyaltyBenefit @relation(fields: [benefitId], references: [id], onDelete: Restrict)
+  billId         String @db.Uuid
+  bill           Bill @relation("BillRedemptions", fields: [billId], references: [id], onDelete: Restrict)
+  activeBill     Bill? @relation("ActiveRedemption")
+  points         Int
+  discountAmount Decimal @db.Decimal(10, 2)
+  status         LoyaltyRedemptionStatus @default(PENDING)
+  paymentId      String? @unique @db.Uuid
+  payment        Payment? @relation(fields: [paymentId], references: [id], onDelete: Restrict)
+  createdAt      DateTime @default(now())
+  confirmedAt    DateTime?
+  releasedAt     DateTime?
+  transaction    LoyaltyTransaction?
+
+  @@index([accountId, status])
+  @@index([billId])
 }
 
 model ReceiptCounter {

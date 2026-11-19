@@ -132,6 +132,57 @@ function serializeBenefit(benefit: { id: string; name: string; pointsRequired: n
 export class LoyaltyService {
   constructor(private readonly db: PrismaClient) {}
 
+  private requireCustomer(session: Session) {
+    if (session.role !== 'CUSTOMER') throw new BusinessError(403, 'FORBIDDEN', 'Solo clientes pueden consultar sus puntos');
+  }
+
+  // H19 has a confirmed ledger. H21 adds redemption reservations separately.
+  private async hasRedemptions() {
+    const [row] = await this.db.$queryRaw<{ present: boolean }[]>`SELECT to_regclass('"LoyaltyRedemption"') IS NOT NULL AS present`;
+    return row.present;
+  }
+
+  async balance(session: Session) {
+    this.requireCustomer(session);
+    const reserved = await this.hasRedemptions() ? Prisma.sql`(
+      SELECT COALESCE(SUM(r."points"), 0) FROM "LoyaltyRedemption" r
+      WHERE r."accountId" = a."id" AND r."status" = 'PENDING'
+    )` : Prisma.sql`0`;
+    const [row] = await this.db.$queryRaw<{ balance: number; reservedPoints: bigint | number }[]>`
+      SELECT a."balance", ${reserved} AS "reservedPoints"
+      FROM "LoyaltyAccount" a WHERE a."customerId" = ${session.userId}::uuid`;
+    const balance = row?.balance ?? 0, reservedPoints = Number(row?.reservedPoints ?? 0);
+    return { balance, reservedPoints, availableBalance: balance - reservedPoints };
+  }
+
+  async history(session: Session, value: unknown) {
+    this.requireCustomer(session);
+    const page = value === undefined ? 1 : typeof value === 'string' && /^\d+$/.test(value) ? Number(value) : NaN;
+    if (!Number.isSafeInteger(page) || page < 1)
+      throw new BusinessError(400, 'INVALID_FIELD', 'page debe ser un entero positivo', 'page');
+
+    const pageSize = 10;
+    const hasRedemptions = await this.hasRedemptions();
+    const source = Prisma.sql`FROM "LoyaltyTransaction" t JOIN "LoyaltyAccount" a ON a."id" = t."accountId"
+      ${hasRedemptions ? Prisma.sql`LEFT JOIN "LoyaltyRedemption" r ON r."id" = t."redemptionId" AND r."accountId" = a."id"` : Prisma.empty}
+      WHERE a."customerId" = ${session.userId}::uuid
+      ${hasRedemptions ? Prisma.sql`AND (t."type" = 'EARN' OR r."status" = 'CONFIRMED' OR r."id" IS NULL)` : Prisma.empty}`;
+    const [count] = await this.db.$queryRaw<{ total: bigint }[]>`SELECT COUNT(*) AS total ${source}`;
+    const total = Number(count.total), offset = (page - 1) * pageSize;
+    if (offset >= total) return { data: [], total, page, pageSize };
+
+    const details = hasRedemptions ? Prisma.sql`
+      COALESCE(t."paymentId", (SELECT p."id" FROM "Payment" p WHERE p."billId" = r."billId"
+        AND p."status" IN ('PAID','REFUNDED') ORDER BY p."completedAt" DESC, p."id" DESC LIMIT 1)) AS "paymentId",
+      (SELECT b."name" FROM "LoyaltyBenefit" b WHERE b."id" = r."benefitId") AS "benefitName"` : Prisma.sql`t."paymentId", NULL::text AS "benefitName"`;
+    const rows = await this.db.$queryRaw<{ id: string; type: string; points: number; createdAt: Date; paymentId: string | null;
+      orderId: string | null; redemptionId: string | null; benefitName: string | null }[]>`
+      SELECT t."id", t."type"::text, t."points", t."createdAt", t."orderId", t."redemptionId", ${details}
+      ${source} ORDER BY t."createdAt" DESC, t."id" DESC LIMIT ${pageSize} OFFSET ${offset}`;
+    const data = rows.map(({ benefitName, ...row }) => row.type === 'REDEEM' ? { ...row, benefitName } : row);
+    return { data, total, page, pageSize };
+  }
+
   getRule(session: Session) {
     this.requireReadRole(session);
     return this.db.loyaltyRule.findUnique({ where: { id: RULE_ID } }).then(rule => {
