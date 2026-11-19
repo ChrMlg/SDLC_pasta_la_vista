@@ -1,6 +1,14 @@
 const { PrismaClient } = require('@prisma/client');
 const { seedInventoryItems } = require('./seed-inventory.cjs');
 
+async function seedLoyaltyRule(db) {
+  await db.loyaltyRule.upsert({
+    where: { id: 'GLOBAL' },
+    create: { id: 'GLOBAL', conversionRate: '1.0000', updatedById: 'SYSTEM' },
+    update: {},
+  });
+}
+
 // Orden: Centro, Bambu, Ramblas. Conserva capacidades y estados ya configurados.
 async function seedReservationTables(db, branchIds) {
   if (branchIds.length !== 3 || new Set(branchIds).size !== 3 || branchIds.some(id => typeof id !== 'string' || !/^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(id)))

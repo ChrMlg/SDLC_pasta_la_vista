@@ -44,6 +44,8 @@ async function main(){
       // Cada eliminación está limitada a IDs generados por esta ejecución. Nunca se limpia una sucursal del equipo.
       const branchId={in:branches},userId={in:userIds},order={branchId};
       await db.notification.deleteMany({where:{userId}});
+      await db.loyaltyTransaction.deleteMany({where:{account:{customerId:userId}}});
+      await db.loyaltyAccount.deleteMany({where:{customerId:userId}});
       await db.loyaltyBenefit.deleteMany({where:{id:{in:benefitIds}}});
       await db.review.deleteMany({where:{branchId}});
       await db.kitchenTicketLog.deleteMany({where:{ticket:{order}}});

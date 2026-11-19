@@ -2,7 +2,7 @@
   "info": {
     "name": "SDLC — Colección completa del backend",
     "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
-    "description": "Colección del backend SDLC. En WSL ejecute npm start; importe esta colección y postman/SDLC.postman_environment.json y seleccione SDLC — Backend local. Si falta baseUrl se usa http://127.0.0.1:3000/api. Los logins autentican con la cookie HttpOnly bistro_session guardada por Postman; no se usa Authorization Bearer. Ejecute carpetas en orden. Las carpetas de operaciones generan registros persistentes de prueba, salvo npm run verify:postman que limpia sus fixtures."
+    "description": "Ejecutar npm ci y npm start con Docker activo. Importar esta colección y SDLC.postman_environment.json generado; seleccionar SDLC — Backend local. Ejecutar carpetas en orden con Collection Runner. Registro completo, sesiones por rol e IDs automáticos. Los 400/401/409 expresamente señalados son validaciones esperadas. La ejecución manual registra operaciones en la base persistente: clientes, platillo, pedidos, pagos del simulador académico, comprobantes y reseñas. Cancela sus reservaciones y compensa IN/OUT de inventario. La mesa pagada queda NEEDS_CLEANING como exige el flujo; requiere una mesa disponible. No crea otra base, no elimina datos existentes. El verificador automatizado usa registros temporales aislados en la misma base y los limpia al finalizar. H19: el flujo de pago aprobado guarda paymentId para idempotencia y revisión de transacciones EARN en PostgreSQL; no existe endpoint HTTP para acumular puntos."
   },
   "variable": [
     {
@@ -17,7 +17,7 @@
       "script": {
         "type": "text/javascript",
         "exec": [
-          "if(!pm.variables.get('baseUrl'))pm.variables.set('baseUrl','http://127.0.0.1:3000/api');const source=pm.request.url.toString()+' '+(pm.request.body&&pm.request.body.raw||'');if(source.includes('{{h22CustomerEmail}}')&&!pm.variables.get('h22CustomerEmail')){const id=pm.variables.replaceIn('{{$guid}}');pm.collectionVariables.set('h22CustomerEmail','h22-'+id+'@correo.local');pm.collectionVariables.set('h22CustomerPassword',id+'Aa9!');}if(source.includes('{{h22BenefitName}}')&&!pm.variables.get('h22BenefitName'))pm.collectionVariables.set('h22BenefitName','Postman H22 '+Date.now());for(const match of source.matchAll(/\\{\\{([A-Za-z][A-Za-z0-9_]*)\\}\\}/g)){if(pm.variables.get(match[1])===undefined||pm.variables.get(match[1])===''){pm.execution.skipRequest();throw new Error('Falta '+match[1]+'. Para credenciales, importe y seleccione SDLC.postman_environment.json. Para IDs de operaciones, ejecute las solicitudes anteriores.');}}"
+          "if(!pm.variables.get('baseUrl'))pm.variables.set('baseUrl','http://127.0.0.1:3000/api');const source=pm.request.url.toString()+' '+(pm.request.body&&pm.request.body.raw||'');if(source.includes('{{h22CustomerEmail}}')&&!pm.variables.get('h22CustomerEmail')){const id=pm.variables.replaceIn('{{$guid}}');pm.collectionVariables.set('h22CustomerEmail','h22-'+id+'@correo.local');pm.collectionVariables.set('h22CustomerPassword',id+'Aa9!');}if(source.includes('{{h22BenefitName}}')&&!pm.variables.get('h22BenefitName'))pm.collectionVariables.set('h22BenefitName','Postman H22 '+Date.now());for(const match of source.matchAll(/\\{\\{([A-Za-z][A-Za-z0-9_]*)\\}\\}/g)){if(pm.variables.get(match[1])===undefined||pm.variables.get(match[1])===''){pm.execution.skipRequest();throw new Error('Falta '+match[1]+'. Importe y seleccione SDLC.postman_environment.json. Para IDs, ejecute las solicitudes anteriores.');}}"
         ]
       }
     }
@@ -973,7 +973,7 @@
       ]
     },
     {
-      "name": "04 Pedido para llevar, cuenta y pago",
+      "name": "04 Pedido para llevar, cuenta, pago H18-H19",
       "item": [
         {
           "name": "Cerrar sesión",
@@ -1140,8 +1140,9 @@
                 "type": "text/javascript",
                 "exec": [
                   "pm.test(\"HTTP 200\",()=>pm.response.to.have.status(200));",
-                  "pm.test('Rechazo esperado',()=>pm.expect(pm.response.json().status).to.eql('FAILED'));",
-                  "pm.test('El pago FAILED no genera comprobante',()=>pm.expect(pm.response.json().receiptId).to.eql(null));"
+                  "const result=pm.response.json();pm.test(\"Rechazo esperado\",()=>pm.expect(result.status).to.eql(\"FAILED\"));",
+                  "pm.test(\"FAILED conserva paymentId y no genera comprobante\",()=>{pm.expect(result.paymentId).to.be.a(\"string\");pm.expect(result.receiptId).to.eql(null);});",
+                  "pm.collectionVariables.set(\"h19FailedPaymentId\",result.paymentId);"
                 ]
               }
             }
@@ -1159,7 +1160,7 @@
               },
               {
                 "key": "idempotency-key",
-                "value": "{{$guid}}"
+                "value": "{{h19PaidIdempotencyKey}}"
               }
             ],
             "body": {
@@ -1169,13 +1170,96 @@
           },
           "event": [
             {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "if(!pm.collectionVariables.get(\"h19PaidIdempotencyKey\"))pm.collectionVariables.set(\"h19PaidIdempotencyKey\",pm.variables.replaceIn(\"{{$guid}}\"));"
+                ]
+              }
+            },
+            {
               "listen": "test",
               "script": {
                 "type": "text/javascript",
                 "exec": [
                   "pm.test(\"HTTP 200\",()=>pm.response.to.have.status(200));",
-                  "pm.collectionVariables.set('receiptId',pm.response.json().receiptId);pm.test('Pago aprobado',()=>pm.expect(pm.response.json().status).to.eql('PAID'));",
-                  "pm.test('Pago aprobado con recibo',()=>{pm.expect(pm.response.json().status).to.eql('PAID');pm.expect(pm.response.json().receiptId).to.be.a('string');});"
+                  "const result=pm.response.json();pm.test(\"Pago PAID y comprobante\",()=>{pm.expect(result.status).to.eql(\"PAID\");pm.expect(result.paymentId).to.be.a(\"string\");pm.expect(result.receiptId).to.be.a(\"string\");});",
+                  "pm.collectionVariables.set(\"paymentId\",result.paymentId);pm.collectionVariables.set(\"receiptId\",result.receiptId);",
+                  "pm.test(\"Respuesta PAID contiene los IDs necesarios para revisar H19 en PostgreSQL\",()=>{pm.expect(pm.collectionVariables.get(\"paymentId\")).to.eql(result.paymentId);});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "H19 Reintento idempotente del pago PAID",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "idempotency-key",
+                "value": "{{h19PaidIdempotencyKey}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\"cardHolder\":\"Cliente Local\",\"cardNumber\":\"4242424242424242\",\"expMonth\":12,\"expYear\":{{cardYear}},\"cvv\":\"123\"}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": "{{baseUrl}}/bills/{{billId}}/payments",
+            "description": "Repite exactamente el pago con la misma clave. El backend debe responder con el paymentId/receiptId ya emitidos y no duplicar las filas EARN de H19."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Reintento responde 200\",()=>pm.response.to.have.status(200));",
+                  "const result=pm.response.json();pm.test(\"Reutiliza el pago y comprobante originales\",()=>{pm.expect(result.status).to.eql(\"PAID\");pm.expect(result.paymentId).to.eql(pm.collectionVariables.get(\"paymentId\"));pm.expect(result.receiptId).to.eql(pm.collectionVariables.get(\"receiptId\"));});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "H19 No existe endpoint público de acumulación",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\"paymentId\":\"{{paymentId}}\",\"orderId\":\"{{orderId}}\",\"points\":999999}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": "{{baseUrl}}/loyalty/accumulate",
+            "description": "H19 solo acumula desde BillingService dentro de la transacción de pago. Esta petición debe devolver 404; no acredita puntos."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"La acumulación arbitraria no está expuesta por HTTP (404)\",()=>pm.response.to.have.status(404));"
                 ]
               }
             }
@@ -1258,7 +1342,8 @@
             }
           ]
         }
-      ]
+      ],
+      "description": "Flujo de cliente para pedido TAKEAWAY → cuenta → pago FAILED/PAID → comprobante. H19 acredita EARN internamente en la transacción PAID y no expone endpoint de acumulación. Para ver puntos, consultar la base según postman/USO-H19.md."
     },
     {
       "name": "05 Cocina, notificaciones y entrega",

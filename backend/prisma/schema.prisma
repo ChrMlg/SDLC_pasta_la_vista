@@ -80,6 +80,7 @@ model User {
   reviews Review[]
   takenKitchenTickets KitchenTicket[]
   kitchenTicketLogs KitchenTicketLog[]
+  loyaltyAccount LoyaltyAccount?
 }
 
 model AuthSession {
@@ -230,6 +231,7 @@ model Order {
   billId String? @db.Uuid
   bill Bill? @relation(fields: [billId], references: [id], onDelete: Restrict)
   review Review?
+  loyaltyTransactions LoyaltyTransaction[]
 
   @@index([branchId, tableId, status])
   @@index([clientId, createdAt])
@@ -321,10 +323,43 @@ model Payment {
   createdAt DateTime @default(now())
   completedAt DateTime?
   receipt Receipt?
+  loyaltyTransactions LoyaltyTransaction[]
 
   @@unique([billId, idempotencyKey])
   @@index([billId, status, createdAt])
   @@index([status, createdAt, billId])
+}
+
+enum LoyaltyTransactionType {
+  EARN
+  REDEEM
+}
+
+model LoyaltyAccount {
+  id           String   @id @default(uuid()) @db.Uuid
+  customerId   String   @unique @db.Uuid
+  customer     User     @relation(fields: [customerId], references: [id], onDelete: Restrict)
+  balance      Int      @default(0)
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @default(now()) @updatedAt
+  transactions LoyaltyTransaction[]
+}
+
+model LoyaltyTransaction {
+  id           String                 @id @default(uuid()) @db.Uuid
+  accountId    String                 @db.Uuid
+  account      LoyaltyAccount         @relation(fields: [accountId], references: [id], onDelete: Restrict)
+  type         LoyaltyTransactionType
+  points       Int
+  paymentId    String?                @db.Uuid
+  payment      Payment?               @relation(fields: [paymentId], references: [id], onDelete: Restrict)
+  orderId      String?                @db.Uuid
+  order        Order?                 @relation(fields: [orderId], references: [id], onDelete: Restrict)
+  redemptionId String?                @unique @db.Uuid
+  createdAt    DateTime               @default(now())
+
+  @@unique([paymentId, orderId])
+  @@index([accountId, createdAt(sort: Desc)])
 }
 
 model ReceiptCounter {

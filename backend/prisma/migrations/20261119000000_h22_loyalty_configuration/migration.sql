@@ -1,5 +1,6 @@
 BEGIN;
 
+-- H19 owns the singleton LoyaltyRule table. H22 adds only the benefit catalog.
 CREATE TABLE "LoyaltyRule" (
   "id" VARCHAR(16) NOT NULL DEFAULT 'GLOBAL',
   "conversionRate" DECIMAL(10,4) NOT NULL,
