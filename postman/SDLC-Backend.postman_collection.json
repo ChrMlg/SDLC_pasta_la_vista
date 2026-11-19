@@ -2,7 +2,7 @@
   "info": {
     "name": "SDLC — Colección completa del backend",
     "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
-    "description": "Ejecutar npm ci y npm start con Docker activo. Importar esta colección y SDLC.postman_environment.json generado; seleccionar SDLC — Backend local. Ejecutar carpetas en orden con Collection Runner. Registro completo, sesiones por rol e IDs automáticos. Los 400/401/409 expresamente señalados son validaciones esperadas. La ejecución manual registra operaciones en la base persistente: clientes, platillo, pedidos, pagos del simulador académico, comprobantes y reseñas. Cancela sus reservaciones y compensa IN/OUT de inventario. La mesa pagada queda NEEDS_CLEANING como exige el flujo; requiere una mesa disponible. No crea otra base, no elimina datos existentes. El verificador automatizado usa registros temporales aislados en la misma base y los limpia al finalizar. H19: el flujo de pago aprobado guarda paymentId para idempotencia; H20 consulta el saldo y el historial del cliente autenticado. No existe endpoint HTTP para acreditar puntos arbitrariamente."
+    "description": "Ejecutar npm ci y npm start con Docker activo. Importar esta colección y SDLC.postman_environment.json generado; seleccionar SDLC — Backend local. Ejecutar carpetas en orden con Collection Runner. Registro completo, sesiones por rol e IDs automáticos. Los 400/401/404/409 expresamente señalados son validaciones esperadas. La ejecución manual registra operaciones en la base persistente: clientes, platillo, pedidos, pagos del simulador académico, comprobantes y reseñas. Cancela sus reservaciones y compensa IN/OUT de inventario. La mesa pagada queda NEEDS_CLEANING como exige el flujo; requiere una mesa disponible. No crea otra base, no elimina datos existentes. El verificador automatizado usa registros temporales aislados en la misma base y los limpia al finalizar. H19: el flujo de pago aprobado guarda paymentId para idempotencia; H20 consulta el saldo y el historial del cliente autenticado; H21 verifica que el canje exige una cuenta OPEN y que liberar un canje inexistente no altera datos. No existe endpoint HTTP para acreditar puntos arbitrariamente."
   },
   "variable": [
     {
@@ -973,7 +973,7 @@
       ]
     },
     {
-      "name": "04 Pedido para llevar, cuenta, pago y lealtad H18-H20",
+      "name": "04 Pedido para llevar, cuenta, pago y lealtad H18-H21",
       "item": [
         {
           "name": "Cerrar sesión",
@@ -1304,9 +1304,65 @@
                 "exec": [
                   "pm.test(\"Historial H20 responde 200\",()=>pm.response.to.have.status(200));",
                   "const history=pm.response.json();",
-                  "pm.test(\"Contrato, paginación y movimientos H20\",()=>{pm.expect(history).to.have.all.keys(\"data\",\"total\",\"page\",\"pageSize\");pm.expect(history.data).to.be.an(\"array\");pm.expect(history.total).to.be.a(\"number\");pm.expect(history.page).to.eql(1);pm.expect(history.pageSize).to.eql(10);pm.expect(history.data.length).to.be.at.most(10);history.data.forEach(row=>{pm.expect(row.id).to.be.a(\"string\");pm.expect(row.type).to.be.oneOf([\"EARN\",\"REDEEM\"]);pm.expect(row.points).to.be.a(\"number\");pm.expect(row.createdAt).to.be.a(\"string\");pm.expect(Date.parse(row.createdAt)).not.to.eql(NaN);pm.expect(row.points).to.be.above(0);if(row.type===\"EARN\"){pm.expect(row.paymentId).to.be.a(\"string\");pm.expect(row.orderId).to.be.a(\"string\");}else{pm.expect(row.points).to.be.below(0);pm.expect(row.redemptionId).to.be.a(\"string\");}});});",
+                  "pm.test(\"Contrato, paginación y movimientos H20\",()=>{pm.expect(history).to.have.all.keys(\"data\",\"total\",\"page\",\"pageSize\");pm.expect(history.data).to.be.an(\"array\");pm.expect(history.total).to.be.a(\"number\");pm.expect(history.page).to.eql(1);pm.expect(history.pageSize).to.eql(10);pm.expect(history.data.length).to.be.at.most(10);history.data.forEach(row=>{pm.expect(row.id).to.be.a(\"string\");pm.expect(row.type).to.be.oneOf([\"EARN\",\"REDEEM\"]);pm.expect(row.points).to.be.a(\"number\");pm.expect(row.createdAt).to.be.a(\"string\");pm.expect(Number.isNaN(Date.parse(row.createdAt))).to.eql(false);if(row.type===\"EARN\"){pm.expect(row.points).to.be.above(0);pm.expect(row.paymentId).to.be.a(\"string\");pm.expect(row.orderId).to.be.a(\"string\");}else{pm.expect(row.points).to.be.below(0);pm.expect(row.redemptionId).to.be.a(\"string\");}});});",
                   "pm.test(\"Historial H20 está ordenado de forma estable\",()=>{for(let index=1;index<history.data.length;index++){const previous=history.data[index-1],current=history.data[index],byDate=Date.parse(previous.createdAt)-Date.parse(current.createdAt);pm.expect(byDate).to.be.at.least(0);if(byDate===0)pm.expect(previous.id.localeCompare(current.id)).to.be.at.least(0);}});",
                   "pm.collectionVariables.set(\"h20HistoryTotal\",String(history.total));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "H21 Canje sobre cuenta pagada — 409 esperado",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\"billId\":\"{{billId}}\",\"benefitId\":\"{{customerId}}\"}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": "{{baseUrl}}/loyalty/redeem",
+            "description": "La cuenta ya fue pagada en este flujo; H21 debe rechazar el canje y no crear una reserva."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Canje H21 en cuenta cerrada responde 409\",()=>pm.response.to.have.status(409));",
+                  "pm.test(\"H21 informa BILL_NOT_OPEN\",()=>{const error=pm.response.json();pm.expect(error.code).to.eql(\"BILL_NOT_OPEN\");pm.expect(error.field).to.eql(\"billId\");});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "H21 Liberar canje inexistente — 404 esperado",
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": "{{baseUrl}}/loyalty/redeem/{{paymentId}}",
+            "description": "El paymentId no es un redemptionId. La petición comprueba que el endpoint no libera ni modifica una cuenta ajena o inexistente."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Liberar canje inexistente responde 404\",()=>pm.response.to.have.status(404));",
+                  "pm.test(\"H21 informa REDEMPTION_NOT_FOUND\",()=>pm.expect(pm.response.json().code).to.eql(\"REDEMPTION_NOT_FOUND\"));"
                 ]
               }
             }

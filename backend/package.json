@@ -23,6 +23,7 @@
     "test:h15": "node --test test/h15-integration.test.cjs",
     "test:h19": "node --test test/h19-integration.test.cjs",
     "test:h20": "node --test test/h20-integration.test.cjs",
+    "test:h21": "node --test test/h21-integration.test.cjs",
     "test:h22": "node --test test/h22-integration.test.cjs",
     "test:h6": "node --test test/h6-integration.test.cjs",
     "test:h7": "node --test test/h7-integration.test.cjs",

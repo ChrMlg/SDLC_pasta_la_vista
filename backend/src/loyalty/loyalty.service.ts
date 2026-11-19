@@ -166,7 +166,7 @@ export class LoyaltyService {
     const source = Prisma.sql`FROM "LoyaltyTransaction" t JOIN "LoyaltyAccount" a ON a."id" = t."accountId"
       ${hasRedemptions ? Prisma.sql`LEFT JOIN "LoyaltyRedemption" r ON r."id" = t."redemptionId" AND r."accountId" = a."id"` : Prisma.empty}
       WHERE a."customerId" = ${session.userId}::uuid
-      ${hasRedemptions ? Prisma.sql`AND (t."type" = 'EARN' OR r."status" = 'CONFIRMED')` : Prisma.empty}`;
+      ${hasRedemptions ? Prisma.sql`AND (t."type" = 'EARN' OR r."status" = 'CONFIRMED' OR r."id" IS NULL)` : Prisma.empty}`;
     const [count] = await this.db.$queryRaw<{ total: bigint }[]>`SELECT COUNT(*) AS total ${source}`;
     const total = Number(count.total), offset = (page - 1) * pageSize;
     if (offset >= total) return { data: [], total, page, pageSize };

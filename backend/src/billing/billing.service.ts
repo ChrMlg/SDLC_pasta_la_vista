@@ -4,6 +4,7 @@ import { validatePayment } from './dto/payment.dto';
 import { calculateTotals, receiptNumber } from './billing-math';
 import type { NotificationsService } from '../notifications/notifications.service';
 import { accumulateLoyaltyPoints } from '../loyalty/loyalty.service';
+import { applyLoyaltyDiscount, confirmLoyaltyRedemption } from '../loyalty/redemption.service';
 
 const uuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 const money = (value: Prisma.Decimal) => value.toFixed(2);
@@ -109,7 +110,7 @@ export class BillingService {
     let payment;
     try {
       payment = await this.paymentTransaction(async tx => {
-        const locked = await tx.$queryRaw<{ id: string; status: string; total: Prisma.Decimal }[]>`SELECT "id", "status"::text, "total" FROM "Bill" WHERE "id" = ${billId}::uuid FOR UPDATE`;
+        const locked = await tx.$queryRaw<{ id: string; status: string; total: Prisma.Decimal; redemptionId: string | null }[]>`SELECT "id", "status"::text, "total", "redemptionId" FROM "Bill" WHERE "id" = ${billId}::uuid FOR UPDATE`;
         if (!locked.length) fail(404, 'NOT_FOUND', 'Cuenta no encontrada');
         const previous = await tx.payment.findUnique({ where: { billId_idempotencyKey: { billId, idempotencyKey: key } } });
         if (previous) {
@@ -127,7 +128,8 @@ export class BillingService {
           if (Date.now() - pending.createdAt.getTime() <= 30_000) fail(409, 'PAYMENT_IN_PROGRESS', 'Hay un pago en proceso');
           await tx.payment.update({ where: { id: pending.id }, data: { status: 'FAILED', failureCode: 'GATEWAY_TIMEOUT', completedAt: new Date() } });
         }
-        return { payment: await tx.payment.create({ data: { billId, userId: session.userId, idempotencyKey: key, amount: locked[0].total, cardLast4: last4 } }), retry: false };
+        const bill = locked[0].redemptionId ? await applyLoyaltyDiscount(tx, billId, locked[0].redemptionId) : locked[0];
+        return { payment: await tx.payment.create({ data: { billId, userId: session.userId, idempotencyKey: key, amount: bill.total, cardLast4: last4 } }), retry: false };
       });
     } catch (error) { if (isConflict(error)) fail(409, 'PAYMENT_IN_PROGRESS', 'Hay un pago en proceso'); throw error; }
     if (payment.retry) return this.paymentResult(payment.payment, billId);
@@ -152,6 +154,7 @@ export class BillingService {
         await tx.receipt.create({ data: { billId, branchId: bill.branchId, sequence, number: receiptNumber(bill.branch.code, sequence),
           paymentId: current.id, clientId: bill.clientId, subtotal: bill.subtotal, discountAmount: bill.discount, taxAmount: bill.tax, total: bill.total,
           cardLast4: last4, snapshot: { branchName: bill.branch.name, tableNumber: bill.table?.number ?? null, type: bill.type, items, subtotal: money(bill.subtotal), discount: money(bill.discount), tax: money(bill.tax), total: money(bill.total) } } });
+        if (bill.redemptionId) await confirmLoyaltyRedemption(tx, { paymentId: result.id });
         await accumulateLoyaltyPoints(tx, { paymentId: result.id });
         if (bill.tableId) {
           await tx.table.update({ where: { id: bill.tableId }, data: { status: 'NEEDS_CLEANING' } });

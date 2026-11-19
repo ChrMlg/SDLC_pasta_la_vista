@@ -52,10 +52,10 @@ test('H20: customer loyalty balance and history', { timeout: 60000 }, async t =>
         [randomUUID(), a, 'PENDING', 20, customerId], [randomUUID(), a, 'PENDING', 30, customerId],
         [randomUUID(), a, 'RELEASED', 12, customerId], [randomUUID(), b, 'PENDING', 3, otherId]]) {
         const target = status === 'CONFIRMED' ? bill : await db.bill.create({ data: { branchId, clientId: owner, type: 'TAKEAWAY', subtotal: 1, tax: 0, total: 1 } });
-        await db.$executeRaw`INSERT INTO "LoyaltyRedemption" ("id","accountId","billId","benefitId","status","points")
-          VALUES (${id}::uuid,${account.id}::uuid,${target.id}::uuid,${benefitId}::uuid,${status}::text,${points})`;
+        await db.loyaltyRedemption.create({ data: { id, accountId: account.id, billId: target.id, benefitId, status, points, discountAmount: '1.00' } });
       }
     }
+    if (present) rows.find(row => row.type === 'REDEEM').paymentId = payment.id;
     await db.loyaltyTransaction.createMany({ data: [...rows, otherEntry] });
     assert.deepEqual(await request(balance + '?customerId=' + otherId, 200, 'customer'),
       { balance: 230, reservedPoints: present ? 50 : 0, availableBalance: present ? 180 : 230 });
