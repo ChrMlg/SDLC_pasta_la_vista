@@ -1,5 +1,5 @@
 const { PrismaClient } = require('@prisma/client');
-const { seedReservationTables } = require('./seed.cjs');
+const { seedReservationTables, seedLoyaltyRule } = require('./seed.cjs');
 const { seedInventoryItems } = require('./seed-inventory.cjs');
 
 // Identidades originales creadas por las migraciones del backend compartido.
@@ -12,6 +12,7 @@ const db = new PrismaClient();
 (async () => {
   await seedReservationTables(db, branchIds);
   await seedInventoryItems(db, branchIds);
+  await seedLoyaltyRule(db);
   if (process.env.LOCAL_ACCESS_KEY) await require('./initial-accounts.cjs').provisionInitialAccounts(db, process.env.LOCAL_ACCESS_KEY, process.env.LOCAL_ACCESS_VERSION);
   console.log('Datos iniciales H10/H13 preparados; existencias y configuraciones previas conservadas.');
 })().catch(() => {

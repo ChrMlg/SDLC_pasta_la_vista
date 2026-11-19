@@ -2,7 +2,7 @@
   "info": {
     "name": "SDLC — Colección completa del backend",
     "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
-    "description": "Ejecutar npm ci y npm start con Docker activo. Importar esta colección y SDLC.postman_environment.json generado; seleccionar SDLC — Backend local. Ejecutar carpetas en orden con Collection Runner. Registro completo, sesiones por rol e IDs automáticos. Los 400/401/409 expresamente señalados son validaciones esperadas. La ejecución manual registra operaciones en la base persistente: clientes, platillo, pedidos, pagos del simulador académico, comprobantes y reseñas. Cancela sus reservaciones y compensa IN/OUT de inventario. La mesa pagada queda NEEDS_CLEANING como exige el flujo; requiere una mesa disponible. No crea otra base, no elimina datos existentes. El verificador automatizado usa registros temporales aislados en la misma base y los limpia al finalizar."
+    "description": "Colección del backend SDLC. En WSL ejecute npm start; importe esta colección y postman/SDLC.postman_environment.json y seleccione SDLC — Backend local. Si falta baseUrl se usa http://127.0.0.1:3000/api. Los logins autentican con la cookie HttpOnly bistro_session guardada por Postman; no se usa Authorization Bearer. Ejecute carpetas en orden. Las carpetas de operaciones generan registros persistentes de prueba, salvo npm run verify:postman que limpia sus fixtures."
   },
   "variable": [
     {
@@ -17,7 +17,7 @@
       "script": {
         "type": "text/javascript",
         "exec": [
-          "const source=pm.request.url.toString()+' '+(pm.request.body && pm.request.body.raw || ''); for(const match of source.matchAll(/\\{\\{([A-Za-z][A-Za-z0-9_]*)\\}\\}/g)){ if(pm.variables.get(match[1])===undefined || pm.variables.get(match[1])===''){ pm.execution.skipRequest(); throw new Error('Falta '+match[1]+'. Importe y seleccione SDLC.postman_environment.json generado por npm start; para IDs de operaciones, ejecute las carpetas anteriores.'); } }"
+          "if(!pm.variables.get('baseUrl'))pm.variables.set('baseUrl','http://127.0.0.1:3000/api');const source=pm.request.url.toString()+' '+(pm.request.body&&pm.request.body.raw||'');if(source.includes('{{h22CustomerEmail}}')&&!pm.variables.get('h22CustomerEmail')){const id=pm.variables.replaceIn('{{$guid}}');pm.collectionVariables.set('h22CustomerEmail','h22-'+id+'@correo.local');pm.collectionVariables.set('h22CustomerPassword',id+'Aa9!');}if(source.includes('{{h22BenefitName}}')&&!pm.variables.get('h22BenefitName'))pm.collectionVariables.set('h22BenefitName','Postman H22 '+Date.now());for(const match of source.matchAll(/\\{\\{([A-Za-z][A-Za-z0-9_]*)\\}\\}/g)){if(pm.variables.get(match[1])===undefined||pm.variables.get(match[1])===''){pm.execution.skipRequest();throw new Error('Falta '+match[1]+'. Para credenciales, importe y seleccione SDLC.postman_environment.json. Para IDs de operaciones, ejecute las solicitudes anteriores.');}}"
         ]
       }
     }
@@ -3222,6 +3222,399 @@
                 "exec": [
                   "pm.test(\"HTTP 401\",()=>pm.response.to.have.status(401));",
                   ""
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "10 Lealtad H22 — configuración y checkout",
+      "description": "Flujo manual de H22. Ejecute de arriba hacia abajo. El login guarda la sesión en la cookie HttpOnly bistro_session del cookie jar de Postman; no use Bearer token. Crea un cliente y un beneficio inactivo persistentes.",
+      "item": [
+        {
+          "name": "H22 Preparar cliente de prueba",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\"email\":\"{{h22CustomerEmail}}\",\"password\":\"{{h22CustomerPassword}}\",\"firstName\":\"Cliente\",\"lastName\":\"Postman H22\",\"phone\":\"20255501\"}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": "{{baseUrl}}/auth/register/customer",
+            "description": "Crea un cliente único para probar el catálogo de checkout. Esta cuenta queda en la base local."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Cliente creado (201)\",()=>pm.response.to.have.status(201));",
+                  "pm.test(\"Rol CUSTOMER\",()=>pm.expect(pm.response.json().role).to.eql(\"CUSTOMER\"));",
+                  "pm.collectionVariables.set(\"h22CustomerId\",pm.response.json().id);"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Login MANAGER — lectura",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\"email\":\"{{managerEmail}}\",\"password\":\"{{managerPassword}}\"}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": "{{baseUrl}}/auth/login",
+            "description": "Inicia sesión con credenciales del environment. Postman conserva bistro_session en su cookie jar."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Login 200\",()=>pm.response.to.have.status(200));",
+                  "pm.test(\"MANAGER autenticado\",()=>pm.expect(pm.response.json().role).to.eql(\"MANAGER\"));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "H22 GET reglas — MANAGER permitido",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{baseUrl}}/management/loyalty/rules",
+            "description": "Debe responder con conversionRate, updatedById y updatedAt."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Lectura administrativa 200\",()=>pm.response.to.have.status(200));",
+                  "pm.test(\"Forma de regla\",()=>{const r=pm.response.json();pm.expect(r.conversionRate).to.be.a(\"number\");pm.expect(r.updatedById).to.be.a(\"string\");pm.expect(r.updatedAt).to.be.a(\"string\");});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "H22 PUT reglas — MANAGER denegado",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\"conversionRate\":1.0000}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": "{{baseUrl}}/management/loyalty/rules",
+            "description": "Comprueba que MANAGER puede leer pero no escribir."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Escritura denegada (403)\",()=>pm.response.to.have.status(403));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "H22 GET catálogo administrativo — MANAGER",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{baseUrl}}/management/loyalty/benefits",
+            "description": "Devuelve beneficios activos e inactivos."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Catálogo administrativo 200\",()=>pm.response.to.have.status(200));",
+                  "pm.test(\"Respuesta es una lista\",()=>pm.expect(pm.response.json()).to.be.an(\"array\"));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Login GENERAL_MANAGER — configuración",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\"email\":\"{{generalEmail}}\",\"password\":\"{{generalPassword}}\"}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": "{{baseUrl}}/auth/login",
+            "description": "Reemplaza la cookie de sesión por la sesión de GENERAL_MANAGER."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Login 200\",()=>pm.response.to.have.status(200));",
+                  "pm.test(\"GENERAL_MANAGER autenticado\",()=>pm.expect(pm.response.json().role).to.eql(\"GENERAL_MANAGER\"));",
+                  "pm.collectionVariables.set(\"h22GeneralManagerId\",pm.response.json().userId);"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "H22 GET regla global",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{baseUrl}}/management/loyalty/rules",
+            "description": "Lee el singleton GLOBAL antes de probar su actualización."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Regla global 200\",()=>pm.response.to.have.status(200));",
+                  "pm.test(\"Tasa positiva\",()=>pm.expect(pm.response.json().conversionRate).to.be.above(0));",
+                  "pm.collectionVariables.set(\"h22OriginalRate\",pm.response.json().conversionRate);"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "H22 PUT regla global",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\"conversionRate\":{{h22OriginalRate}}}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": "{{baseUrl}}/management/loyalty/rules",
+            "description": "Actualiza la regla con la tasa actual para verificar upsert sin cambiar el valor de negocio."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Actualización 200\",()=>pm.response.to.have.status(200));",
+                  "pm.test(\"Conserva tasa y registra actor\",()=>{const r=pm.response.json();pm.expect(r.conversionRate).to.eql(Number(pm.collectionVariables.get(\"h22OriginalRate\")));pm.expect(r.updatedById).to.eql(pm.collectionVariables.get(\"h22GeneralManagerId\"));});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "H22 POST crear beneficio activo",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\"name\":\"{{h22BenefitName}}\",\"pointsRequired\":1000,\"discountValue\":5.00,\"isActive\":true}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": "{{baseUrl}}/management/loyalty/benefits",
+            "description": "Crea un beneficio de prueba. El test guarda benefitId para el PATCH posterior; queda persistido en la base local."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Beneficio creado (201)\",()=>pm.response.to.have.status(201));",
+                  "pm.test(\"Campos del beneficio\",()=>{const b=pm.response.json();pm.expect(b.id).to.be.a(\"string\");pm.expect(b.isActive).to.eql(true);pm.expect(b.discountValue).to.eql(5);});",
+                  "pm.collectionVariables.set(\"h22BenefitId\",pm.response.json().id);"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "H22 PATCH desactivar beneficio",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\"isActive\":false}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": "{{baseUrl}}/management/loyalty/benefits/{{h22BenefitId}}",
+            "description": "Desactiva el beneficio creado arriba; los beneficios no se eliminan."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Beneficio desactivado (200)\",()=>pm.response.to.have.status(200));",
+                  "pm.test(\"Queda inactivo\",()=>pm.expect(pm.response.json().isActive).to.eql(false));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Login CUSTOMER — checkout",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\"email\":\"{{h22CustomerEmail}}\",\"password\":\"{{h22CustomerPassword}}\"}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": "{{baseUrl}}/auth/login",
+            "description": "Inicia sesión con el cliente temporal creado al inicio de la carpeta."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Login 200\",()=>pm.response.to.have.status(200));",
+                  "pm.test(\"CUSTOMER autenticado\",()=>pm.expect(pm.response.json().role).to.eql(\"CUSTOMER\"));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "H22 GET beneficios activos — CUSTOMER",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{baseUrl}}/loyalty/benefits",
+            "description": "Lista solo beneficios activos, ordenados por puntos requeridos. No debe incluir el beneficio recién desactivado."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Catálogo de checkout 200\",()=>pm.response.to.have.status(200));",
+                  "pm.test(\"Solo activos y beneficio desactivado excluido\",()=>{const a=pm.response.json();pm.expect(a).to.be.an(\"array\");pm.expect(a.every(b=>b.isActive===true)).to.eql(true);pm.expect(a.some(b=>b.id===pm.collectionVariables.get(\"h22BenefitId\"))).to.eql(false);});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "H22 GET reglas — CUSTOMER denegado",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{baseUrl}}/management/loyalty/rules",
+            "description": "Verifica que el acceso de administración no se concede a CUSTOMER."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Cliente sin acceso administrativo (403)\",()=>pm.response.to.have.status(403));"
                 ]
               }
             }

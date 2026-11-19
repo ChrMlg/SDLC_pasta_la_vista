@@ -15,6 +15,7 @@ import { InventoryModule } from './inventory/inventory.module';
 import { AnalyticsModule } from './analytics/analytics.module';
 import { ReviewsModule } from './reviews/reviews.module';
 import { KitchenModule } from './kitchen/kitchen.module';
+import { LoyaltyModule } from './loyalty/loyalty.module';
 import { AuthService } from './auth/auth.service';
 import type { AuthenticatedRequest } from './common/session';
 
@@ -25,7 +26,7 @@ class HealthController {
   async health() { await this.db.$queryRaw`SELECT 1`; return { status: 'ok' }; }
 }
 
-@Module({ controllers: [HealthController], imports: [PrismaModule, AuthModule, MenuModule, OrdersModule, BillingModule, NotificationsModule, ReservationsModule, InventoryModule, KitchenModule, ReviewsModule, AnalyticsModule] })
+@Module({ controllers: [HealthController], imports: [PrismaModule, AuthModule, MenuModule, OrdersModule, BillingModule, NotificationsModule, ReservationsModule, InventoryModule, KitchenModule, ReviewsModule, AnalyticsModule, LoyaltyModule] })
 class AppModule {}
 
 async function bootstrap() {
