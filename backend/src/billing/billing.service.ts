@@ -3,6 +3,7 @@ import type { Session } from '../menu/menu.service';
 import { validatePayment } from './dto/payment.dto';
 import { calculateTotals, receiptNumber } from './billing-math';
 import type { NotificationsService } from '../notifications/notifications.service';
+import { accumulateLoyaltyPoints } from '../loyalty/loyalty.service';
 
 const uuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 const money = (value: Prisma.Decimal) => value.toFixed(2);
@@ -151,6 +152,7 @@ export class BillingService {
         await tx.receipt.create({ data: { billId, branchId: bill.branchId, sequence, number: receiptNumber(bill.branch.code, sequence),
           paymentId: current.id, clientId: bill.clientId, subtotal: bill.subtotal, discountAmount: bill.discount, taxAmount: bill.tax, total: bill.total,
           cardLast4: last4, snapshot: { branchName: bill.branch.name, tableNumber: bill.table?.number ?? null, type: bill.type, items, subtotal: money(bill.subtotal), discount: money(bill.discount), tax: money(bill.tax), total: money(bill.total) } } });
+        await accumulateLoyaltyPoints(tx, { paymentId: result.id });
         if (bill.tableId) {
           await tx.table.update({ where: { id: bill.tableId }, data: { status: 'NEEDS_CLEANING' } });
           await tx.tableAssignment.updateMany({ where: { tableId: bill.tableId, validFrom: { lt: new Date() }, OR: [{ validTo: null }, { validTo: { gt: new Date() } }] }, data: { validTo: new Date() } });
