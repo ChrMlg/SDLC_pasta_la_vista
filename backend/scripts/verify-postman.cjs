@@ -11,7 +11,7 @@ const {seedInventoryItems}=require('../prisma/seed-inventory.cjs');
 async function main(){
   const config=loadProjectConfig('local'),url=new URL(config.DATABASE_URL),baseUrl=config.PROJECT_BASE_URL;
   assert.ok(['localhost','127.0.0.1'].includes(url.hostname),'Solo se verifica el backend local');
-  const db=new PrismaClient({datasources:{db:{url:url.toString()}}}),branches=[randomUUID(),randomUUID()],userIds=[],roles={},run=randomUUID();
+  const db=new PrismaClient({datasources:{db:{url:url.toString()}}}),branches=[randomUUID(),randomUUID()],userIds=[],benefitIds=[],roles={},run=randomUUID();
   let failure;
   try {
     await db.branch.createMany({data:branches.map((id,i)=>({id,code:`VERIFY-${run}-${i}`,name:`Verificación ${run} ${i}`}))});
@@ -30,6 +30,9 @@ async function main(){
         if(!error && args.response.code===201 && args.request.url.toString().endsWith('/auth/register/customer')){
           const body=JSON.parse(args.response.stream.toString());if(body.role==='CUSTOMER' && typeof body.id==='string')userIds.push(body.id);
         }
+        if(!error && args.response.code===201 && args.request.url.toString().endsWith('/management/loyalty/benefits')){
+          const body=JSON.parse(args.response.stream.toString());if(typeof body.id==='string')benefitIds.push(body.id);
+        }
       });
     });
     const report={requests:result.run.stats.requests,assertions:result.run.stats.assertions,failures:result.run.failures.map(item=>({request:item.source?.name,error:item.error?.message}))};
@@ -41,6 +44,7 @@ async function main(){
       // Cada eliminación está limitada a IDs generados por esta ejecución. Nunca se limpia una sucursal del equipo.
       const branchId={in:branches},userId={in:userIds},order={branchId};
       await db.notification.deleteMany({where:{userId}});
+      await db.loyaltyBenefit.deleteMany({where:{id:{in:benefitIds}}});
       await db.review.deleteMany({where:{branchId}});
       await db.kitchenTicketLog.deleteMany({where:{ticket:{order}}});
       await db.kitchenTicket.deleteMany({where:{order}});
