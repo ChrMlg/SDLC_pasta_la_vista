@@ -2,7 +2,7 @@
   "info": {
     "name": "SDLC — Colección completa del backend",
     "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
-    "description": "Ejecutar npm ci y npm start con Docker activo. Importar esta colección y SDLC.postman_environment.json generado; seleccionar SDLC — Backend local. Ejecutar carpetas en orden con Collection Runner. Registro completo, sesiones por rol e IDs automáticos. Los 400/401/409 expresamente señalados son validaciones esperadas. La ejecución manual registra operaciones en la base persistente: clientes, platillo, pedidos, pagos del simulador académico, comprobantes y reseñas. Cancela sus reservaciones y compensa IN/OUT de inventario. La mesa pagada queda NEEDS_CLEANING como exige el flujo; requiere una mesa disponible. No crea otra base, no elimina datos existentes. El verificador automatizado usa registros temporales aislados en la misma base y los limpia al finalizar. H19: el flujo de pago aprobado guarda paymentId para idempotencia y revisión de transacciones EARN en PostgreSQL; no existe endpoint HTTP para acumular puntos."
+    "description": "Ejecutar npm ci y npm start con Docker activo. Importar esta colección y SDLC.postman_environment.json generado; seleccionar SDLC — Backend local. Ejecutar carpetas en orden con Collection Runner. Registro completo, sesiones por rol e IDs automáticos. Los 400/401/409 expresamente señalados son validaciones esperadas. La ejecución manual registra operaciones en la base persistente: clientes, platillo, pedidos, pagos del simulador académico, comprobantes y reseñas. Cancela sus reservaciones y compensa IN/OUT de inventario. La mesa pagada queda NEEDS_CLEANING como exige el flujo; requiere una mesa disponible. No crea otra base, no elimina datos existentes. El verificador automatizado usa registros temporales aislados en la misma base y los limpia al finalizar. H19: el flujo de pago aprobado guarda paymentId para idempotencia; H20 consulta el saldo y el historial del cliente autenticado. No existe endpoint HTTP para acreditar puntos arbitrariamente."
   },
   "variable": [
     {
@@ -17,7 +17,7 @@
       "script": {
         "type": "text/javascript",
         "exec": [
-          "if(!pm.variables.get('baseUrl'))pm.variables.set('baseUrl','http://127.0.0.1:3000/api');const source=pm.request.url.toString()+' '+(pm.request.body&&pm.request.body.raw||'');if(source.includes('{{h22CustomerEmail}}')&&!pm.variables.get('h22CustomerEmail')){const id=pm.variables.replaceIn('{{$guid}}');pm.collectionVariables.set('h22CustomerEmail','h22-'+id+'@correo.local');pm.collectionVariables.set('h22CustomerPassword',id+'Aa9!');}if(source.includes('{{h22BenefitName}}')&&!pm.variables.get('h22BenefitName'))pm.collectionVariables.set('h22BenefitName','Postman H22 '+Date.now());for(const match of source.matchAll(/\\{\\{([A-Za-z][A-Za-z0-9_]*)\\}\\}/g)){if(pm.variables.get(match[1])===undefined||pm.variables.get(match[1])===''){pm.execution.skipRequest();throw new Error('Falta '+match[1]+'. Importe y seleccione SDLC.postman_environment.json. Para IDs, ejecute las solicitudes anteriores.');}}"
+          "if(!pm.variables.get('baseUrl'))pm.variables.set('baseUrl','http://127.0.0.1:3000/api');const source=pm.request.url.toString()+' '+(pm.request.body&&pm.request.body.raw||'');if(source.includes('/auth/register/customer')){const id=pm.variables.replaceIn('{{$guid}}');pm.collectionVariables.set('h22CustomerEmail','h22-'+id+'@correo.local');pm.collectionVariables.set('h22CustomerPassword',id+'Aa9!');pm.collectionVariables.unset('h22CustomerId');}if(source.includes('{{h22BenefitName}}')&&!pm.variables.get('h22BenefitName'))pm.collectionVariables.set('h22BenefitName','Postman H22 '+Date.now());for(const match of source.matchAll(/\\{\\{([A-Za-z][A-Za-z0-9_]*)\\}\\}/g)){if(pm.variables.get(match[1])===undefined||pm.variables.get(match[1])===''){pm.execution.skipRequest();throw new Error('Falta '+match[1]+'. Importe y seleccione SDLC.postman_environment.json. Para IDs, ejecute las solicitudes anteriores.');}}"
         ]
       }
     }
@@ -973,7 +973,7 @@
       ]
     },
     {
-      "name": "04 Pedido para llevar, cuenta, pago H18-H19",
+      "name": "04 Pedido para llevar, cuenta, pago y lealtad H18-H20",
       "item": [
         {
           "name": "Cerrar sesión",
@@ -1260,6 +1260,53 @@
                 "type": "text/javascript",
                 "exec": [
                   "pm.test(\"La acumulación arbitraria no está expuesta por HTTP (404)\",()=>pm.response.to.have.status(404));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "H20 Consultar saldo de lealtad",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{baseUrl}}/me/loyalty/balance",
+            "description": "Consulta exclusivamente el saldo del cliente de la cookie actual. No recibe customerId."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Saldo H20 responde 200\",()=>pm.response.to.have.status(200));",
+                  "const balance=pm.response.json();",
+                  "pm.test(\"Contrato y aritmética del saldo H20\",()=>{pm.expect(balance).to.have.all.keys(\"balance\",\"reservedPoints\",\"availableBalance\");for(const key of [\"balance\",\"reservedPoints\",\"availableBalance\"]){pm.expect(balance[key]).to.be.a(\"number\");pm.expect(Number.isInteger(balance[key])).to.eql(true);}pm.expect(balance.balance).to.be.at.least(0);pm.expect(balance.reservedPoints).to.be.at.least(0);pm.expect(balance.availableBalance).to.eql(balance.balance-balance.reservedPoints);});",
+                  "pm.collectionVariables.set(\"h20Balance\",String(balance.balance));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "H20 Consultar historial de lealtad — página 1",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{baseUrl}}/me/loyalty/history?page=1",
+            "description": "Lista solo movimientos confirmados del cliente autenticado, de más reciente a más antiguo; cada página contiene hasta diez filas."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Historial H20 responde 200\",()=>pm.response.to.have.status(200));",
+                  "const history=pm.response.json();",
+                  "pm.test(\"Contrato, paginación y movimientos H20\",()=>{pm.expect(history).to.have.all.keys(\"data\",\"total\",\"page\",\"pageSize\");pm.expect(history.data).to.be.an(\"array\");pm.expect(history.total).to.be.a(\"number\");pm.expect(history.page).to.eql(1);pm.expect(history.pageSize).to.eql(10);pm.expect(history.data.length).to.be.at.most(10);history.data.forEach(row=>{pm.expect(row.id).to.be.a(\"string\");pm.expect(row.type).to.be.oneOf([\"EARN\",\"REDEEM\"]);pm.expect(row.points).to.be.a(\"number\");pm.expect(row.createdAt).to.be.a(\"string\");pm.expect(Date.parse(row.createdAt)).not.to.eql(NaN);pm.expect(row.points).to.be.above(0);if(row.type===\"EARN\"){pm.expect(row.paymentId).to.be.a(\"string\");pm.expect(row.orderId).to.be.a(\"string\");}else{pm.expect(row.points).to.be.below(0);pm.expect(row.redemptionId).to.be.a(\"string\");}});});",
+                  "pm.test(\"Historial H20 está ordenado de forma estable\",()=>{for(let index=1;index<history.data.length;index++){const previous=history.data[index-1],current=history.data[index],byDate=Date.parse(previous.createdAt)-Date.parse(current.createdAt);pm.expect(byDate).to.be.at.least(0);if(byDate===0)pm.expect(previous.id.localeCompare(current.id)).to.be.at.least(0);}});",
+                  "pm.collectionVariables.set(\"h20HistoryTotal\",String(history.total));"
                 ]
               }
             }
@@ -3347,8 +3394,8 @@
                 "type": "text/javascript",
                 "exec": [
                   "pm.test(\"Cliente creado (201)\",()=>pm.response.to.have.status(201));",
-                  "pm.test(\"Rol CUSTOMER\",()=>pm.expect(pm.response.json().role).to.eql(\"CUSTOMER\"));",
-                  "pm.collectionVariables.set(\"h22CustomerId\",pm.response.json().id);"
+                  "pm.test(\"Rol CUSTOMER\",()=>{if(pm.response.code===201)pm.expect(pm.response.json().role).to.eql(\"CUSTOMER\");});",
+                  "if(pm.response.code===201){pm.collectionVariables.set(\"h22CustomerId\",pm.response.json().id);pm.test(\"Email generado coincide con el cliente creado\",()=>pm.expect(pm.response.json().email).to.eql(pm.collectionVariables.get(\"h22CustomerEmail\")));}"
                 ]
               }
             }

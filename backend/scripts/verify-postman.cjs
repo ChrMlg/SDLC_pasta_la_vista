@@ -22,8 +22,15 @@ async function main(){
       await db.user.create({data:{id,email,passwordHash:await hashPassword(password),role,branchId:index===null?null:branches[index]}});
       roles[label+'Email']=email;roles[label+'Password']=password;
     }
+    const staleH22Email=`h22-stale-${run}@verify.local`;
+    userIds.push(randomUUID());
+    await db.user.create({data:{id:userIds.at(-1),email:staleH22Email,role:'CUSTOMER'}});
     const values={baseUrl,branchId:branches[0],otherBranchId:branches[1],branchIds:branches.join(','),...roles};
     const collection=JSON.parse(fs.readFileSync(path.join(root,'postman/SDLC-Backend.postman_collection.json'),'utf8'));
+    collection.variable.push(
+      {key:'h22CustomerEmail',value:staleH22Email,type:'string'},
+      {key:'h22CustomerPassword',value:'StalePassword123!',type:'string'},
+    );
     const result=await new Promise((resolve,reject)=>{
       const runner=newman.run({collection,environment:{name:'Verificación aislada en la base local',values:Object.entries(values).map(([key,value])=>({key,value,enabled:true}))},reporters:[],timeoutRequest:15000},(error,summary)=>error?reject(error):resolve(summary));
       runner.on('request',(error,args)=>{
