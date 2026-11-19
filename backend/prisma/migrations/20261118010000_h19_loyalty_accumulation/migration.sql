@@ -6,22 +6,6 @@ DO $$ BEGIN
   END IF;
 END $$;
 
--- H22 provides management endpoints; H19 requires a chain-wide rule row.
-DO $$ BEGIN
-  IF to_regclass('"LoyaltyRule"') IS NULL THEN
-    CREATE TABLE "LoyaltyRule" (
-      "id" VARCHAR(16) NOT NULL DEFAULT 'GLOBAL',
-      "conversionRate" DECIMAL(10,4) NOT NULL DEFAULT 1,
-      "updatedById" VARCHAR(80) NOT NULL DEFAULT 'SYSTEM',
-      "updatedAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
-      CONSTRAINT "LoyaltyRule_pkey" PRIMARY KEY ("id"),
-      CONSTRAINT "LoyaltyRule_singleton_check" CHECK ("id" = 'GLOBAL'),
-      CONSTRAINT "LoyaltyRule_rate_check" CHECK ("conversionRate" > 0)
-    );
-    INSERT INTO "LoyaltyRule" ("id", "conversionRate", "updatedById") VALUES ('GLOBAL', 1, 'SYSTEM');
-  END IF;
-END $$;
-
 CREATE TABLE "LoyaltyAccount" (
   "id" UUID NOT NULL,
   "customerId" UUID NOT NULL,
