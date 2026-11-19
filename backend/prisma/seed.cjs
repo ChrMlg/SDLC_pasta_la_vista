@@ -1,6 +1,14 @@
 const { PrismaClient } = require('@prisma/client');
 const { seedInventoryItems } = require('./seed-inventory.cjs');
 
+async function seedLoyaltyRule(db) {
+  await db.loyaltyRule.upsert({
+    where: { id: 'GLOBAL' },
+    create: { id: 'GLOBAL', conversionRate: '1.0000', updatedById: 'SYSTEM' },
+    update: {},
+  });
+}
+
 // Orden: Centro, Bambu, Ramblas. Conserva capacidades y estados ya configurados.
 async function seedReservationTables(db, branchIds) {
   if (branchIds.length !== 3 || new Set(branchIds).size !== 3 || branchIds.some(id => typeof id !== 'string' || !/^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(id)))
@@ -28,13 +36,15 @@ if (require.main === module) {
   const scope = process.env.SEED_SCOPE || 'reservations';
   const seed = scope === 'inventory'
     ? seedInventoryItems(db, (process.env.INVENTORY_BRANCH_IDS || '').split(',').map(id => id.trim()))
+    : scope === 'loyalty'
+      ? seedLoyaltyRule(db)
     : scope === 'reservations'
       ? seedReservationTables(db, [process.env.RESERVATION_CENTRO_ID, process.env.RESERVATION_BAMBU_ID, process.env.RESERVATION_RAMBLAS_ID])
       : Promise.reject(new Error('SEED_SCOPE inválido'));
   seed
-    .then(() => console.log(scope === 'inventory' ? 'H13: insumos iniciales preparados.' : 'H10: mesas iniciales preparadas.'))
+    .then(() => console.log(scope === 'inventory' ? 'H13: insumos iniciales preparados.' : scope === 'loyalty' ? 'H22: regla global preparada.' : 'H10: mesas iniciales preparadas.'))
     .catch(() => { console.error('No se pudo ejecutar el seed. Revise SEED_SCOPE, los IDs de sucursal, la conexión y las migraciones.'); process.exitCode = 1; })
     .finally(() => db.$disconnect());
 }
 
-module.exports = { seedReservationTables };
+module.exports = { seedReservationTables, seedLoyaltyRule };
