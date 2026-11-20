@@ -3,14 +3,14 @@
 ```mermaid
 flowchart LR
   P[Navegador con Swagger o Postman] -->|HTTPS| C[HTTPS de Railway]
-  F[Frontend requerido: pendiente] -.->|HTTPS| C
+  F[Interfaz web fuera de este repositorio] -.->|HTTPS| C
   subgraph Railway[Servicio Railway]
     C -->|HTTP interno PORT| B[Backend NestJS]
   end
   B -->|Prisma sobre TLS| D[(PostgreSQL en Supabase)]
 ```
 
-Arquitectura de producción preparada; publicación aún pendiente. En desarrollo, Compose raíz mantiene PostgreSQL 16 en un volumen local y publica API/BD solo en loopback.
+Backend comunicado como desplegado por el equipo el 20/11/2026 en Railway con PostgreSQL administrado por Supabase. La vinculación al commit definitivo de `main`/`v1.0.0` debe comprobarse al publicar. En desarrollo, Compose raíz mantiene PostgreSQL 16 en un volumen local y publica API/BD solo en loopback.
 
 | Capa | Tecnología |
 |---|---|

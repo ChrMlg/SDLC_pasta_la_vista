@@ -1,6 +1,11 @@
 # API
 
-Swagger local: `http://127.0.0.1:3000/api/docs`. URL HTTPS de Swagger: pendiente de despliegue.
+**Swagger en Railway:** https://practical-transformation-staging.up.railway.app/api/docs
+**Especificación OpenAPI JSON:** https://practical-transformation-staging.up.railway.app/api/docs-json
+**Healthcheck:** https://practical-transformation-staging.up.railway.app/api/health
+**Swagger local:** `http://127.0.0.1:3000/api/docs`.
+
+La aplicación configura Swagger en `backend/src/main.ts`. El equipo informó que las rutas funcionan en Postman. Antes de entregar, abrir Swagger desde un navegador externo y comprobar la respuesta real; la URL documentada no representa una ejecución de prueba por sí sola.
 
 ## Autenticación
 

@@ -4,9 +4,15 @@ Backend del sistema de restaurantes con sucursales: catálogo, pedidos, cocina, 
 
 **Curso:** Ingeniería de Software, UCA, ciclo 02/2026. Sección y número oficial de proyecto: pendientes de confirmación del equipo.
 
-## Ambiente desplegado
+## Backend desplegado
 
-Swagger público: pendiente. Preparamos el backend en Railway (imagen Docker) y PostgreSQL en Supabase; faltan proyecto, variables, dominio público y publicación. Este repositorio y el alcance confirmado contienen solo backend. El formato exige también frontend público: ese requisito sigue pendiente.
+**API (Railway):** https://practical-transformation-staging.up.railway.app/api
+**Healthcheck:** https://practical-transformation-staging.up.railway.app/api/health
+**Swagger:** https://practical-transformation-staging.up.railway.app/api/docs
+
+El equipo informó el 20/11/2026 que el backend está desplegado, conectado a PostgreSQL en Supabase, y que sus rutas responden en Postman. Este documento no acredita por sí mismo cada criterio de aceptación ni el commit exacto publicado en Railway: deben cotejarse con el deployment y los resultados de prueba. La interfaz frontend se gestiona fuera del alcance de este repositorio.
+
+Para la entrega final, integrar los cambios de esta rama a `develop` mediante PR aprobado, publicar `release/1.0.0` en `main` mediante otro PR aprobado y crear la etiqueta `v1.0.0` sobre el commit publicado. **Railway debe desplegar ese mismo commit de `main`.** Véase [forma de trabajo](docs/07-forma-de-trabajo.md) y [despliegue](docs/06-despliegue.md).
 
 Las credenciales de evaluación se entregan en Moodle, nunca en Git.
 
@@ -14,11 +20,11 @@ Las credenciales de evaluación se entregan en Moodle, nunca en Git.
 
 | Integrante | GitHub | Alcance según issues |
 |---|---|---|
-| Marcelo Enrique Campos Reyes | Marceloereyes | Catálogo, cocina, reservas, inventario, reseñas y reportes; detalle en historias |
+| Marcelo Enrique Campos Reyes (00148023) | Marceloereyes | Módulos 3 (Cocina), 4 (Reservaciones), 5 (Inventario), 8 (Reseñas) y 10 (Reportes): H6–H15, H23–H25 y H31–H35 (18 historias). No incluye H1–H3. |
 | Christian | ChrMlg | Pedidos, pagos y notificaciones; detalle en historias |
 | Diego | DiegoJacob0 | H19 y H20 |
 
-Carnets y nombres completos restantes: pendientes de confirmación del equipo.
+Carnets y nombres completos de los demás integrantes: por completar por el equipo.
 
 ## Inicio local
 

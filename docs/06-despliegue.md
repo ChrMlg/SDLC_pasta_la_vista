@@ -2,7 +2,14 @@
 
 ## Estado y alcance
 
-Preparamos el backend como servicio Docker en Railway y PostgreSQL en Supabase. Aún no existe un despliegue público verificado. El alcance confirmado es solo backend; la guía también exige frontend e interfaz pública, requisito pendiente. Swagger documenta la API y no sustituye el frontend.
+El equipo informó el 20/11/2026 que el backend está desplegado en Railway con PostgreSQL en Supabase y que las rutas responden en Postman.
+
+- Servicio: https://practical-transformation-staging.up.railway.app/
+- API: https://practical-transformation-staging.up.railway.app/api
+- Healthcheck: https://practical-transformation-staging.up.railway.app/api/health
+- Swagger: https://practical-transformation-staging.up.railway.app/api/docs
+
+Para la entrega, cotejar el SHA del deployment con el commit de `main` etiquetado `v1.0.0`. El frontend se mantiene en otro alcance y su documentación corresponde al equipo responsable.
 
 Docker Compose raíz mantiene la base local. En producción Railway ejecuta una imagen del backend; no se crea una segunda base en Railway.
 
@@ -18,9 +25,9 @@ La integración conserva Prisma 5 y `directUrl` en `schema.prisma`; no copiar la
 
 ## Configuración del servicio Railway
 
-Completar primero el flujo de release: `release/1.0.0` desde develop, PR aprobado hacia main, retorno a develop y etiqueta `v1.0.0`. La entrega final debe desplegar exactamente el commit etiquetado en main. No fusionamos ni desplegamos automáticamente por preparar esta configuración.
+**Publicación de la versión:** la rama `bugfix/H1-H35-preparacion-railway` debe entrar a `develop` mediante PR aprobado. Luego crear `release/1.0.0` desde `develop`, realizar los ajustes finales, fusionar a `main` por PR aprobado, regresar la release a `develop` y crear `v1.0.0` en el commit publicado de `main`. Esta documentación se preparó a partir del commit `c3720b7`; comprobar los cambios más recientes antes de abrir el PR y al publicar en `main`. Antes de cambiar Railway a la rama `main`, verificar que la release ya fue fusionada. No basta con volver a desplegar una imagen antigua.
 
-Crear un servicio conectado al repositorio con estos ajustes antes del primer despliegue:
+Mantener el servicio existente en Railway y revisar estos ajustes al cambiar la rama de despliegue:
 
 | Ajuste | Valor |
 |---|---|
@@ -69,7 +76,7 @@ La sesión usa cookie HttpOnly y SameSite=Lax, no JWT. Un frontend futuro debe u
 
 ## Semilla y accesos
 
-Tras un despliegue healthy, copiar el comando SSH del servicio en Railway y ejecutarlo con la CLI autenticada. Dentro del contenedor, trabajar en `/app/backend`. [CLI y SSH de Railway](https://docs.railway.com/cli).
+Si faltan datos de evaluación en Supabase, comprobar antes los registros existentes y, solo cuando corresponda, conectarse por SSH al servicio Railway mediante la CLI autenticada. Dentro del contenedor, trabajar en `/app/backend`. [CLI y SSH de Railway](https://docs.railway.com/cli).
 
 ```bash
 node scripts/seed-evaluation.cjs --configured
