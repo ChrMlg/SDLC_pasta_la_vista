@@ -1,17 +1,17 @@
 # Problemas conocidos y pendientes
 
+Actualización documental: 20/11/2026, partiendo del commit `c3720b7` de la rama `bugfix/H1-H35-preparacion-railway`.
+
 | ID | Problema / reproducción | Impacto | Estado |
 |---|---|---|---|
-| DEF-01 | Importar environment antiguo “SDLC QA privado” o usar credenciales de otra instalación | Alto: autenticación/IDs incorrectos | Instrucciones y exportación corregidas localmente; falta confirmación en el equipo de Christian |
-| DEF-02 | Ejecutar npm test en el checkout backend: antes referenciaba archivos frontend ausentes | Alto | Comando corregido; resultado actual en evidencias locales |
-| DEF-04 | Ejecutar Salud con solo baseUrl: el script previo reportaba «Falta branchId» aunque la API respondiera 200 | Alto | Corregido y verificado con Newman sin environment ni credenciales; healthcheck con URL local por defecto. Confirmación en el equipo de Christian pendiente |
-| ENT-01 | No hay release v1.0.0 ni URLs HTTPS configuradas | Alto | DigitalOcean confirmado; servidor, dominio, revisión y publicación pendientes |
-| ENT-02 | Verificar criterios de todas las historias contra suites .spec.ts Jest | Alto | Suites Jest incorporadas para las historias de Marcelo; falta revisión independiente de la matriz y criterios duplicados H1–H3 |
-| ENT-03 | Pruebas manuales por criterio, capturas y aceptación independiente | Alto | Pendiente; no se registran como ejecutadas |
-| ENT-04 | Frontend y módulos de lealtad H19–H22 no aparecen en este backend | Alto | Validar integración con responsables; no declarar terminadas sus historias |
-| ENT-05 | Aprobaciones de PR, cards Hecho, carnets y URL de tablero | Medio | 18 PR aprobados y fusionados verificados; H1–H3, cards, carnets y URL de tablero por confirmar |
-| ENT-06 | Semilla suficiente para todos los módulos y usuario cliente de evaluación | Alto | Semilla local de los módulos implementados verificada; lealtad y ejecución desplegada pendientes |
+| DEF-01 | Importar un environment antiguo o credenciales de otra instalación | Alto: autenticación/IDs incorrectos | Exportación e instrucciones corregidas; usar los accesos de la instalación actual |
+| DEF-02 | Ejecutar H6/H23 después de incorporar H19: la limpieza intenta borrar pedidos referenciados por puntos | Medio: falla el hook de prueba y deja fixtures | Limpieza ajustada para borrar primero lealtad de los clientes exclusivos del fixture |
+| DEF-03 | Newman ejecuta H22 y cambia la regla global de puntos | Medio: altera configuración local después de verificar | Runner ajustado para restaurar la regla original |
+| ENT-01 | La versión final debe corresponder al commit publicado en main con la etiqueta v1.0.0 | Alto | Backend reportado como desplegado en Railway; falta comprobar PR, tag y SHA de main |
+| ENT-02 | Trazabilidad de historias y pruebas | Alto | Suites de componente integradas en commit e010a63; 18 PR #68–85 de los módulos 3, 4, 5, 8 y 10 documentados; verificar tarjetas del tablero. H1–H3 excluidas de la evaluación individual de Marcelo; hay issues históricos duplicados #19–#21. |
+| ENT-03 | Pruebas manuales, capturas y aceptación desplegada | Alto | Pendientes de evidencias y ejecución independiente; no se guardan dentro de este repositorio, sino en OneDrive según la guía |
+| ENT-04 | Frontend fuera del repositorio backend | Medio | Documentar su repositorio y URL por separado al preparar la entrega común |
+| ENT-05 | Tablero, colaboradores y accesos docentes no confirmados en este ZIP | Medio | Comprobar tarjetas Hecho, enlaces PR y que los docentes tengan acceso; credenciales solo por Moodle |
+| ENT-06 | Semilla y acceso de producción | Alto | El equipo informó que la API responde en Postman; confirmar que existen cuentas de los cinco roles y datos de evaluación en Supabase, sin poner secretos en el repositorio |
 
-Los cambios de esta revisión están sin commit y sin push por instrucción de Marcelo. No hay PR correctivo que enlazar todavía. Fecha de revisión: 17/11/2026.
-
-DEF-03: una ejecución paralela de regresiones, simultánea con escrituras de preparación, obtuvo 409 BILL_CONFLICT en H6. Confirmación secuencial: 259 comprobaciones aprobadas. El runner `test:stories` serializa las suites; no se modificó el contrato del servicio de cuentas.
+Los defectos corregidos deben incorporarse a la versión entregada.

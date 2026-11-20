@@ -11,7 +11,7 @@
     "test:catalog:db": "node test/catalog-db.test.cjs",
     "test:catalog:availability:db": "node test/catalog-availability-db.test.cjs",
     "test:catalog:menu:db": "node test/catalog-menu-db.test.cjs",
-    "test": "jest --runInBand && npm run test:legacy",
+    "test": "jest --runInBand && npm run test:legacy && node --test test/production-config.test.cjs",
     "test:integration": "node test/integration.cjs",
     "prisma:deploy": "prisma migrate deploy",
     "prisma:seed": "prisma db seed",

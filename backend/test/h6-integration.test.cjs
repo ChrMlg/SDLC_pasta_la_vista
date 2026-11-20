@@ -25,6 +25,9 @@ test('H6 #37: branch kitchen queue with local PostgreSQL', { timeout: 60000 }, a
       await db.kitchenTicket.deleteMany({ where: { orderId } });
       await db.orderLinkCode.deleteMany({ where: { orderId } });
       await db.orderItem.deleteMany({ where: { orderId } });
+      // Los pagos H19 también crean lealtad para los clientes de este fixture.
+      await db.loyaltyTransaction.deleteMany({ where: { account: { customerId: { in: userIds } } } });
+      await db.loyaltyAccount.deleteMany({ where: { customerId: { in: userIds } } });
       await db.order.deleteMany({ where: { branchId } });
       await db.receipt.deleteMany({ where: { branchId } });
       await db.payment.deleteMany({ where: { bill: { branchId } } });

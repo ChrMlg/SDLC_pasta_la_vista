@@ -1,0 +1,9 @@
+import { InventoryService } from './inventory.service';
+const branchId='a1111111-1111-4111-8111-111111111111';
+const session={userId:'manager',role:'MANAGER' as const,branchId};
+describe('H13. Consulta de niveles de inventario',()=>{
+ it('AC1: semilla contiene nombre, unidad, mínimo y stock por sucursal sin sobrescribir',async()=>{const {seedInventoryItems}=require('../../prisma/seed-inventory.cjs');const createMany=jest.fn();await seedInventoryItems({$transaction:async(fn:any)=>fn({branch:{count:async()=>1},inventoryItem:{createMany}})},[branchId]);expect(createMany).toHaveBeenCalledWith({skipDuplicates:true,data:expect.arrayContaining([expect.objectContaining({branchId,name:'Arroz',unit:'g',minStock:5000,currentStock:0})])});});
+ it('AC2: consulta exclusivamente la sucursal del gerente',async()=>{const findUnique=jest.fn().mockResolvedValue({inventoryItems:[]});await expect(new InventoryService({branch:{findUnique}} as any).list(branchId,{},session)).resolves.toEqual([]);expect(findUnique.mock.calls[0][0].where).toEqual({id:branchId});});
+ it('AC3: rechaza roles no gerenciales y sucursal ajena',async()=>{const service=new InventoryService({} as any);for(const role of ['CUSTOMER','WAITER','KITCHEN'])await expect(service.list(branchId,{}, {...session,role} as any)).rejects.toMatchObject({status:403});await expect(service.list(branchId,{}, {...session,branchId:'other'})).rejects.toMatchObject({status:404});});
+ it('AC4: lectura no descuenta existencias ni depende de recetas',async()=>{const inventoryItems=[{id:'item',name:'Arroz',currentStock:8,minStock:5,unit:'g',branchId}];const service=new InventoryService({branch:{findUnique:async()=>({inventoryItems})}} as any);await expect(service.list(branchId,{},session)).resolves.toEqual(inventoryItems);expect(inventoryItems[0].currentStock).toBe(8);});
+});

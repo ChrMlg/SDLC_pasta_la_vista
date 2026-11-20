@@ -2,6 +2,7 @@ import { Body, CanActivate, Controller, Delete, ExecutionContext, Injectable, Pa
 import { BusinessError } from '../common/business-error';
 import type { AuthenticatedRequest } from '../common/session';
 import { RedemptionService } from './redemption.service';
+import { ApiBody, ApiTags } from '@nestjs/swagger';
 
 @Injectable()
 export class RedemptionGuard implements CanActivate {
@@ -13,12 +14,14 @@ export class RedemptionGuard implements CanActivate {
   }
 }
 
+@ApiTags('Lealtad')
 @Controller('loyalty/redeem')
 @UseGuards(RedemptionGuard)
 export class RedemptionController {
   constructor(private readonly redemptions: RedemptionService) {}
 
   @Post()
+  @ApiBody({ schema: { type: 'object', required: ['billId', 'benefitId'], properties: { billId: { type: 'string', format: 'uuid' }, benefitId: { type: 'string', format: 'uuid' } } } })
   redeem(@Body() body: unknown, @Req() request: AuthenticatedRequest) {
     return this.redemptions.redeem(body, request.user!);
   }
