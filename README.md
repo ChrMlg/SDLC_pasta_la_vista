@@ -1,4 +1,4 @@
-# Pasta la Vista
+# Bistro
 
 Backend del sistema de restaurantes con sucursales: catálogo, pedidos, cocina, reservaciones, inventario, pagos, lealtad, reseñas, notificaciones y reportes.
 
@@ -21,10 +21,7 @@ Las credenciales de evaluación se entregan en Moodle, nunca en Git.
 | Integrante | GitHub | Alcance según issues |
 |---|---|---|
 | Marcelo Enrique Campos Reyes (00148023) | Marceloereyes | Módulos 3 (Cocina), 4 (Reservaciones), 5 (Inventario), 8 (Reseñas) y 10 (Reportes): H6–H15, H23–H25 y H31–H35 (18 historias). No incluye H1–H3. |
-| Christian | ChrMlg | Pedidos, pagos y notificaciones; detalle en historias |
-| Diego | DiegoJacob0 | H19 y H20 |
-
-Carnets y nombres completos de los demás integrantes: por completar por el equipo.
+| Christian (00110219) | ChrMlg | Pedidos, pagos y notificaciones; detalle en historias |
 
 ## Inicio local
 
