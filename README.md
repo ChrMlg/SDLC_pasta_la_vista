@@ -6,7 +6,7 @@ Backend del sistema de restaurantes con sucursales: catálogo, pedidos, cocina, 
 
 ## Ambiente desplegado
 
-Swagger público: pendiente. Preparamos el backend en DigitalOcean (Droplet, Docker Compose y Caddy) y PostgreSQL en Supabase; faltan proyecto, servidor, dominio y publicación. Este repositorio y el alcance confirmado contienen solo backend. El formato exige también frontend público: ese requisito sigue pendiente.
+Swagger público: pendiente. Preparamos el backend en Railway (imagen Docker) y PostgreSQL en Supabase; faltan proyecto, variables, dominio público y publicación. Este repositorio y el alcance confirmado contienen solo backend. El formato exige también frontend público: ese requisito sigue pendiente.
 
 Las credenciales de evaluación se entregan en Moodle, nunca en Git.
 

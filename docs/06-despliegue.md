@@ -1,97 +1,94 @@
-# Despliegue: DigitalOcean y Supabase
+# Despliegue: Railway y Supabase
 
 ## Estado y alcance
 
-Preparamos el **backend** para un Droplet de DigitalOcean con Docker Compose y Caddy; PostgreSQL se aloja en Supabase. No se han creado recursos externos ni verificado un dominio público. Este repositorio no tiene frontend. La guía de entrega exige frontend público y flujos desde navegador: falta cubrir ese requisito o confirmar una excepción con la cátedra. Swagger no sustituye el frontend.
+Preparamos el backend como servicio Docker en Railway y PostgreSQL en Supabase. Aún no existe un despliegue público verificado. El alcance confirmado es solo backend; la guía también exige frontend e interfaz pública, requisito pendiente. Swagger documenta la API y no sustituye el frontend.
 
-El formato permite elegir plataforma; menciona Supabase y Neon como opciones. Elegimos Supabase para los datos y DigitalOcean para la API. El PostgreSQL de Compose raíz se conserva exclusivamente para desarrollo local.
+Docker Compose raíz mantiene la base local. En producción Railway ejecuta una imagen del backend; no se crea una segunda base en Railway.
 
 ## Preparar Supabase
 
 1. Crear un proyecto dedicado al ambiente de evaluación. Guardar sus credenciales de base en un gestor privado. No necesitamos claves `anon`/`service_role` ni Supabase Auth: NestJS mantiene las sesiones y permisos.
 2. Desactivar **Data API** en la configuración API de Supabase: este proyecto accede mediante Prisma y sus tablas no implementan políticas RLS para acceso directo desde clientes. La única API pública será NestJS. [Referencia oficial](https://supabase.com/docs/guides/database/prisma).
 3. En **Connect**, copiar la URI de **Session pooler**, puerto **5432**. Funciona por IPv4 y sirve para la aplicación y las migraciones. Usar ese mismo destino en `DATABASE_URL` y `DIRECT_URL`; incluir `sslmode=require`, `schema=public` y, para limitar conexiones de una instancia, `connection_limit=5`. Codificar los caracteres especiales de la contraseña como componente URL. No inventar el hostname ni el identificador del proyecto.
-4. Alternativa: conexión directa si el Droplet tiene conectividad IPv6 al destino. Si se elige Transaction pooler (6543) para `DATABASE_URL`, Prisma 5 necesita `pgbouncer=true`; `DIRECT_URL` debe seguir usando conexión directa o Session pooler, nunca Transaction pooler. [Conexiones de Supabase](https://supabase.com/docs/guides/database/connecting-to-postgres).
+4. Alternativa: conexión directa si el servicio tiene conectividad IPv6 al destino. Si se elige Transaction pooler (6543) para `DATABASE_URL`, Prisma 5 necesita `pgbouncer=true`; `DIRECT_URL` debe seguir usando conexión directa o Session pooler, nunca Transaction pooler. [Conexiones de Supabase](https://supabase.com/docs/guides/database/connecting-to-postgres).
 5. Usar un esquema de aplicación vacío para la primera instalación. Las migraciones crean tablas, restricciones y datos iniciales; la semilla agrega ejemplos de evaluación. No hace falta subir un dump de la base local. Si existen datos reales que deban trasladarse, realizar una migración de datos planificada con respaldo antes de publicar; no ejecutar `migrate reset`, `db push --accept-data-loss` ni importar encima de tablas existentes.
 
 La integración conserva Prisma 5 y `directUrl` en `schema.prisma`; no copiar la configuración de Prisma 7 de ejemplos recientes sin una migración de dependencias.
 
-## Preparar el Droplet y la versión
+## Configuración del servicio Railway
 
-1. Disponer de Docker Engine, Compose, Git y Node.js 22. Apuntar un dominio de API al Droplet mediante DNS. Abrir 80/443; restringir SSH a los administradores. No exponer 3000 ni 5432.
-2. Completar los cambios en `develop` por PR revisados. Crear `release/1.0.0`, fijar la versión y abrir PR hacia `main` aprobado por otro integrante. Integrar el retorno a `develop`; etiquetar el commit de `main` como `v1.0.0` y publicar sus notas. Estos pasos no se han ejecutado automáticamente.
-3. Clonar el repositorio privado en el servidor con acceso de lectura y seleccionar el tag verificado de `main`. El código desplegado debe coincidir exactamente con esa versión. Mantener el checkout sin ediciones de código.
-4. Desde la raíz:
+Completar primero el flujo de release: `release/1.0.0` desde develop, PR aprobado hacia main, retorno a develop y etiqueta `v1.0.0`. La entrega final debe desplegar exactamente el commit etiquetado en main. No fusionamos ni desplegamos automáticamente por preparar esta configuración.
 
-```bash
-node backend/scripts/prepare-production.cjs DOMINIO_REAL_DE_API
-```
+Crear un servicio conectado al repositorio con estos ajustes antes del primer despliegue:
 
-Se crea `deploy/digitalocean/.env.production` con permisos privados y una clave de accesos aleatoria. Completar allí `DATABASE_URL` y `DIRECT_URL`, entre comillas simples para que Compose no interpole caracteres `$`. No publicar ni pegar el archivo en logs. El generador se niega a sobrescribir configuraciones existentes.
+| Ajuste | Valor |
+|---|---|
+| Rama de producción | main, con release aprobada |
+| Root Directory | `/` (raíz del repositorio) |
+| Variable RAILWAY_DOCKERFILE_PATH | `backend/Dockerfile` |
+| Start Command | `sh scripts/start-production.sh` |
+| Healthcheck Path | `/api/health` |
+| Healthcheck Timeout | 300 segundos inicialmente |
+| Réplicas | 1 inicialmente |
 
-```bash
-node backend/scripts/prepare-production.cjs --check
-docker compose --env-file deploy/digitalocean/.env.production -f deploy/digitalocean/compose.yaml config --quiet
-```
+El Dockerfile usa los manifiestos npm de la raíz: no establecer `/backend` como Root Directory. No usar `npm start` de la raíz, que levanta Docker Compose local. El comando de producción valida variables, aplica migraciones, ejecuta bootstrap y arranca NestJS. Si un paso falla, el proceso termina antes de escuchar.
 
-La comprobación valida formato, TLS, cookies, orígenes y modo del pooler; no comprueba conectividad. Si se conserva una configuración anterior con `POSTGRES_PASSWORD`, agregar las dos URI de Supabase y conservar `LOCAL_ACCESS_KEY`. No elimina ni migra un volumen de producción antiguo.
+Railway admite indicar el Dockerfile mediante `RAILWAY_DOCKERFILE_PATH`. [Dockerfiles en Railway](https://docs.railway.com/builds/dockerfiles).
 
-## Arrancar
+Generar un dominio público del servicio y usarlo en PUBLIC_API_URL. El backend escucha en `0.0.0.0` y en el `PORT` del entorno. Configurar el puerto de destino del dominio para que coincida con PORT. El healthcheck consulta PostgreSQL y debe devolver 200 antes de considerar exitoso el despliegue. [Healthchecks en Railway](https://docs.railway.com/deployments/healthchecks).
 
-```bash
-docker compose --env-file deploy/digitalocean/.env.production -f deploy/digitalocean/compose.yaml up -d --build --wait
-```
+## Variables privadas
 
-Son dos contenedores: backend y Caddy. El backend valida la configuración, aplica `prisma migrate deploy`, ejecuta bootstrap y escucha. Supabase es la única base de producción. Las cuentas demo históricas de las migraciones quedan deshabilitadas; los accesos entregables se generan con la clave privada.
-
-Caddy obtiene el certificado con DNS correcto y puertos 80/443 accesibles. Conservamos sus volúmenes para renovarlo. [HTTPS automático de Caddy](https://caddyserver.com/docs/automatic-https).
-
-Comprobar desde otro equipo, sin omitir la validación TLS:
-
-```bash
-curl --fail --show-error https://DOMINIO_REAL_DE_API/api/health
-curl --fail --show-error https://DOMINIO_REAL_DE_API/api/docs-json
-```
-
-Abrir además `/api/docs` en navegador. El healthcheck consulta PostgreSQL; se espera HTTP 200 y `{"status":"ok"}`. Un contenedor healthy en local no acredita HTTPS público.
-
-## Usuarios y semilla de evaluación
-
-Después del arranque, ejecutar una sola vez a la vez:
-
-```bash
-docker compose --env-file deploy/digitalocean/.env.production -f deploy/digitalocean/compose.yaml exec backend node scripts/seed-evaluation.cjs --configured
-docker compose --env-file deploy/digitalocean/.env.production -f deploy/digitalocean/compose.yaml exec backend node scripts/export-team-access.cjs --configured
-docker compose --env-file deploy/digitalocean/.env.production -f deploy/digitalocean/compose.yaml cp backend:/app/ACCESOS_LOCALES.md ./ACCESOS_PRODUCCION.md
-docker compose --env-file deploy/digitalocean/.env.production -f deploy/digitalocean/compose.yaml cp backend:/app/ACCESO_CLIENTE_EVALUACION.md ./ACCESO_CLIENTE_EVALUACION.md
-chmod 600 ACCESOS_PRODUCCION.md ACCESO_CLIENTE_EVALUACION.md
-```
-
-Es la misma semilla que `npm run seed:evaluation` en local. Prepara los cinco roles, sucursales, menú, reservas, inventario, cocina, pagos simulados, comprobantes, reseñas y ventas. También crea la regla y un beneficio de lealtad, un pago que genera puntos y una cuenta abierta para canje. Conserva ejemplos y configuraciones ya modificados; no repone puntos gastados ni reactiva beneficios desactivados. Si cambió la regla, el saldo acumulado depende de esa regla.
-
-Los archivos exportados son privados y están excluidos de Git. Verificar el login del cliente y del personal desde el dominio público. Entregar las credenciales de producción en Moodle, no las locales. Conservar `LOCAL_ACCESS_KEY`, la base y las mismas cuentas al menos hasta el **24 de noviembre de 2026**. Las regresiones y Newman automatizados escriben fixtures y están restringidos a la base local; no ejecutarlos contra producción.
-
-## Variables de producción
+Completar las variables en Railway; `deploy/railway/.env.example` documenta los nombres. Las conexiones apuntan al mismo proyecto Supabase.
 
 | Variable | Uso |
 |---|---|
-| API_DOMAIN | Dominio público sin protocolo ni ruta |
-| DATABASE_URL | URI TLS de Supabase para Prisma Client |
-| DIRECT_URL | URI TLS al mismo proyecto para migraciones; directa o Session pooler |
-| LOCAL_ACCESS_KEY | Clave hexadecimal privada estable de 64 caracteres para los accesos |
-| LOCAL_ACCESS_VERSION | 2, fijada en Compose |
-| PUBLIC_API_URL | Compose construye `https://API_DOMAIN/api` |
-| CORS_ORIGINS | Vacío para Swagger del mismo origen; si hay frontend, sus orígenes HTTPS exactos separados por coma |
-| COOKIE_SECURE | true, fijado en Compose |
-| DISABLE_LEGACY_DEMO | true en producción; deshabilita únicamente las cuentas demo históricas conocidas |
-| PORT | 3000 interno, sin publicación directa |
+| DATABASE_URL | URI TLS para Prisma Client |
+| DIRECT_URL | URI TLS directa o Session pooler 5432 para migraciones |
+| LOCAL_ACCESS_KEY | Clave hexadecimal privada estable de 64 caracteres |
+| LOCAL_ACCESS_VERSION | 2 para una instalación nueva; conservar la existente |
+| PUBLIC_API_URL | `https://DOMINIO_REAL/api` |
+| COOKIE_SECURE | true |
+| CORS_ORIGINS | Vacío para Swagger; orígenes HTTPS exactos si hay frontend |
+| RAILWAY_DOCKERFILE_PATH | backend/Dockerfile |
+| PORT | Puerto suministrado/configurado en Railway; debe coincidir con el dominio |
+| DISABLE_LEGACY_DEMO | El script de producción fija true para deshabilitar cuentas demo históricas |
 
-No se usa JWT: la autenticación es una sesión opaca con cookie HttpOnly y SameSite=Lax. Un frontend futuro debe usar el mismo sitio (por ejemplo, subdominios del mismo dominio) y enviar credenciales. Un sitio distinto requiere revisar cookies y protección CSRF antes de habilitarlo.
+Se puede generar una plantilla privada local, sin sobrescribir claves existentes:
 
-## Actualizar, respaldo y aceptación
+```bash
+node backend/scripts/prepare-production.cjs DOMINIO_REAL_DE_RAILWAY
+# Completar DATABASE_URL y DIRECT_URL en deploy/railway/.env.production.
+node backend/scripts/prepare-production.cjs --check
+```
 
-Antes de cada actualización, respaldar Supabase mediante sus mecanismos disponibles o un `pg_dump` privado. Revisar las migraciones y conservar la configuración privada. Desplegar el nuevo tag de `main` con el mismo comando de Compose. Repetir salud, Swagger, logins y flujos; cambiar solo la imagen no revierte una migración incompatible. No borrar volúmenes para reparar errores.
+Transferir los valores al panel Variables de Railway mediante una sesión privada. No subir ese archivo al repositorio ni copiarlo a capturas o logs. La validación comprueba formato, no conectividad ni la existencia del dominio.
 
-Una corrección posterior a publicar sigue `hotfix/<descripcion>` desde `main`, PR revisados hacia `main` y `develop`, y versión `v1.0.1`. Registrar el SHA desplegado, la fecha y las URLs reales en README y API.
+La sesión usa cookie HttpOnly y SameSite=Lax, no JWT. Un frontend futuro debe usar el mismo sitio y enviar credenciales; un sitio distinto requiere revisar cookies y CSRF antes de habilitarlo.
 
-Entrega final: **20/11/2026, 23:59**, hora de El Salvador. Plan ejecutado: **22/11/2026, 23:59**. Ejecutar la aceptación desplegada el 21–22 y mantener el sistema activo hasta el 24.
+## Semilla y accesos
+
+Tras un despliegue healthy, copiar el comando SSH del servicio en Railway y ejecutarlo con la CLI autenticada. Dentro del contenedor, trabajar en `/app/backend`. [CLI y SSH de Railway](https://docs.railway.com/cli).
+
+```bash
+node scripts/seed-evaluation.cjs --configured
+node scripts/export-team-access.cjs --configured
+```
+
+No usar `railway run` como equivalente de SSH: ejecuta procesos en la máquina local con variables remotas. La semilla es la misma de `npm run seed:evaluation` en local; prepara los cinco roles, menú, reservas, inventario, cocina, pagos, comprobantes, reseñas, reportes y lealtad con una cuenta abierta para canje. Ejecutar en serie; conserva ejemplos modificados y no repone puntos gastados.
+
+Los accesos quedan en `/app/ACCESOS_LOCALES.md` y `/app/ACCESO_CLIENTE_EVALUACION.md` dentro del contenedor. Recuperarlos mediante la sesión privada y guardarlos fuera del repositorio; no imprimirlos en logs de despliegue. Los archivos del contenedor son temporales, pero las cuentas están en Supabase: conservar LOCAL_ACCESS_KEY y LOCAL_ACCESS_VERSION permite exportar los mismos accesos después de redesplegar. Verificar cada rol desde el dominio público y entregar credenciales solamente en Moodle.
+
+## Comprobar y actualizar
+
+```bash
+curl --fail --show-error https://DOMINIO_REAL/api/health
+curl --fail --show-error https://DOMINIO_REAL/api/docs-json
+```
+
+Abrir `/api/docs` desde otro equipo, iniciar sesión y recorrer las historias. Registrar URLs reales en README y API; completar capturas de uso y aceptación. No ejecutar runners de fixtures contra producción.
+
+Antes de actualizar, respaldar Supabase y revisar migraciones. Publicar un nuevo commit/tag revisado de main y comprobar qué SHA desplegó Railway. Una reversión de imagen no revierte migraciones incompatibles. Para correcciones posteriores a publicar: hotfix desde main, revisión hacia main/develop y versión v1.0.1.
+
+Entrega final: 20/11/2026 a las 23:59; plan ejecutado: 22/11/2026 a las 23:59; mantener servicio y usuarios hasta el 24/11, hora de El Salvador. Las pruebas locales no acreditan HTTPS ni aceptación desplegada.

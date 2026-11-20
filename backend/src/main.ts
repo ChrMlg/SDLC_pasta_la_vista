@@ -52,6 +52,6 @@ async function bootstrap() {
   app.use((request: AuthenticatedRequest, _response: unknown, next: (error?: unknown) => void) => {
     void auth.attach(request).then(() => next(), error => next(error));
   });
-  await app.listen(Number(process.env.PORT ?? 3000));
+  await app.listen(Number(process.env.PORT ?? 3000), '0.0.0.0');
 }
 void bootstrap();
