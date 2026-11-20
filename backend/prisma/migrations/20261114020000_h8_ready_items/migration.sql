@@ -1,0 +1,1 @@
+ALTER TABLE "OrderItem" ADD COLUMN "readyAt" TIMESTAMP(3), ADD COLUMN "readyById" UUID;

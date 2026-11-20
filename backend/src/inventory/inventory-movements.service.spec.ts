@@ -1,0 +1,7 @@
+import {setup,session,input,itemId,branchId} from './inventory.spec-helper';
+describe('H14. Movimientos manuales de inventario',()=>{
+ it('AC1: rechaza cantidades no enteras o no positivas y motivo vacío',async()=>{for(const patch of [{quantity:0},{quantity:-1},{quantity:1.5},{reason:''}]){const {tx,service}=setup();await expect(service.create({...input,...patch},session)).rejects.toMatchObject({status:400});expect(tx.inventoryItem.update).not.toHaveBeenCalled();}});
+ it('AC2: salida insuficiente no modifica stock ni crea movimiento',async()=>{const {tx,service}=setup();await expect(service.create({...input,quantity:11},session)).rejects.toMatchObject({status:400});expect(tx.inventoryItem.update).not.toHaveBeenCalled();expect(tx.inventoryMovement.create).not.toHaveBeenCalled();});
+ it('AC3: reposición resuelve alerta y audita usuario y fecha',async()=>{const {tx,service}=setup(5);await service.create({...input,type:'IN'},session);expect(tx.inventoryAlert.updateMany).toHaveBeenCalledWith({where:{itemId,status:'ACTIVE'},data:{status:'RESOLVED',resolvedByUserId:'u',resolvedAt:expect.any(Date)}});});
+ it('AC4: impide escritura fuera de sucursal o rol',async()=>{const {service}=setup();await expect(service.create(input,{...session,branchId:'other'})).rejects.toMatchObject({status:404});await expect(service.create(input,{...session,role:'CUSTOMER'})).rejects.toMatchObject({status:403});});
+});

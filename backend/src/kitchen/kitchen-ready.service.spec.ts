@@ -1,0 +1,12 @@
+import {Logger} from '@nestjs/common';
+import { KitchenReadyService } from './kitchen-ready.service';
+import {fixture,branchId,orderId,itemId,kitchen} from './kitchen.spec-helper';
+function setup(status='IN_PREPARATION'){const f=fixture(status);return {...f,service:new KitchenReadyService(f.db,f.notifications as any)};}
+describe('H8. Marcado de platillos como listos',()=>{
+ it('AC1: registra listo, fecha y responsable',async()=>{const {service,tx}=setup();await service.mark(branchId,orderId,itemId,{},kitchen);expect(tx.orderItem.updateMany.mock.calls[0][0].data).toMatchObject({isReady:true,readyById:'cook',readyAt:expect.any(Date)});});
+ it('AC2: último platillo sincroniza READY en una transacción',async()=>{const {service,tx,db}=setup();await service.mark(branchId,orderId,itemId,{},kitchen);expect(db.$transaction).toHaveBeenCalledTimes(1);expect(tx.order.update.mock.calls[0][0].data.status).toBe('READY');expect(tx.kitchenTicket.update.mock.calls[0][0].data.status).toBe('READY');});
+ it('AC3: notifica al terminar; fallo del aviso conserva respuesta READY',async()=>{const log=jest.spyOn(Logger.prototype,'error').mockImplementation(()=>{});const {service,notifications}=setup();notifications.kitchenStatusCommitted.mockRejectedValue(new Error('offline') as never);await expect(service.mark(branchId,orderId,itemId,{},kitchen)).resolves.toMatchObject({orderStatus:'READY'});expect(notifications.kitchenStatusCommitted).toHaveBeenCalledWith(orderId,'READY','log');expect(log).toHaveBeenCalled();log.mockRestore();});
+ it('AC4: comanda no preparada devuelve 409',async()=>{await expect(setup('PENDING').service.mark(branchId,orderId,itemId,{},kitchen)).rejects.toMatchObject({status:409,code:'TICKET_NOT_IN_PREPARATION'});});
+ it('AC5: ítem listo devuelve conflicto sin escribir',async()=>{const {service,tx}=setup();tx.orderItem.findFirst.mockResolvedValue({isReady:true,status:'READY'});await expect(service.mark(branchId,orderId,itemId,{},kitchen)).rejects.toMatchObject({code:'ITEM_ALREADY_READY'});expect(tx.orderItem.updateMany).not.toHaveBeenCalled();});
+ it('AC6: actualización condicional perdida no emite segundo aviso',async()=>{const {service,tx,notifications}=setup();tx.orderItem.updateMany.mockResolvedValue({count:0});await expect(service.mark(branchId,orderId,itemId,{},kitchen)).rejects.toMatchObject({status:409});expect(notifications.kitchenStatusCommitted).not.toHaveBeenCalled();expect(tx.order.update).not.toHaveBeenCalled();});
+});

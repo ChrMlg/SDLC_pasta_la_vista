@@ -1,0 +1,3814 @@
+{
+  "info": {
+    "name": "SDLC — Colección completa del backend",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
+    "description": "Ejecutar npm ci y npm start con Docker activo. Importar esta colección y SDLC.postman_environment.json generado; seleccionar SDLC — Backend local. Ejecutar carpetas en orden con Collection Runner. Registro completo, sesiones por rol e IDs automáticos. Los 400/401/404/409 expresamente señalados son validaciones esperadas. La ejecución manual registra operaciones en la base persistente: clientes, platillo, pedidos, pagos del simulador académico, comprobantes y reseñas. Cancela sus reservaciones y compensa IN/OUT de inventario. La mesa pagada queda NEEDS_CLEANING como exige el flujo; requiere una mesa disponible. No crea otra base, no elimina datos existentes. El verificador automatizado usa registros temporales aislados en la misma base y los limpia al finalizar. H19: el flujo de pago aprobado guarda paymentId para idempotencia; H20 consulta el saldo y el historial del cliente autenticado; H21 verifica que el canje exige una cuenta OPEN y que liberar un canje inexistente no altera datos. No existe endpoint HTTP para acreditar puntos arbitrariamente."
+  },
+  "variable": [
+    {
+      "key": "baseUrl",
+      "value": "http://127.0.0.1:3000/api",
+      "type": "string"
+    }
+  ],
+  "event": [
+    {
+      "listen": "prerequest",
+      "script": {
+        "type": "text/javascript",
+        "exec": [
+          "if(!pm.variables.get('baseUrl'))pm.variables.set('baseUrl','http://127.0.0.1:3000/api');const source=pm.request.url.toString()+' '+(pm.request.body&&pm.request.body.raw||'');if(source.includes('/auth/register/customer')){const id=pm.variables.replaceIn('{{$guid}}');pm.collectionVariables.set('h22CustomerEmail','h22-'+id+'@correo.local');pm.collectionVariables.set('h22CustomerPassword',id+'Aa9!');pm.collectionVariables.unset('h22CustomerId');}if(source.includes('{{h22BenefitName}}')&&!pm.variables.get('h22BenefitName'))pm.collectionVariables.set('h22BenefitName','Postman H22 '+Date.now());for(const match of source.matchAll(/\\{\\{([A-Za-z][A-Za-z0-9_]*)\\}\\}/g)){if(pm.variables.get(match[1])===undefined||pm.variables.get(match[1])===''){pm.execution.skipRequest();throw new Error('Falta '+match[1]+'. Importe y seleccione SDLC.postman_environment.json. Para IDs, ejecute las solicitudes anteriores.');}}"
+        ]
+      }
+    }
+  ],
+  "item": [
+    {
+      "name": "00 Salud, registro y autenticación",
+      "item": [
+        {
+          "name": "Salud e inicio de ejecución",
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/health",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ]
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"HTTP 200\",()=>pm.response.to.have.status(200));",
+                  "pm.test(\"Backend y PostgreSQL disponibles\",()=>pm.expect(pm.response.json().status).to.eql('ok'));"
+                ]
+              }
+            },
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const id=pm.variables.replaceIn('{{$guid}}');pm.collectionVariables.set('runId',id);\npm.collectionVariables.set('customerEmail','cliente-'+id+'@correo.local');pm.collectionVariables.set('customerPassword',pm.variables.replaceIn('{{$guid}}')+'Aa9!');\npm.collectionVariables.set('cardYear',new Date().getUTCFullYear()+2);pm.collectionVariables.set('reservationDate',new Date(Date.now()+7*86400000).toISOString().slice(0,10));\npm.collectionVariables.set('from',new Date(Date.now()-86400000).toISOString());pm.collectionVariables.set('to',new Date(Date.now()+86400000).toISOString());"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Cerrar sesión",
+          "request": {
+            "method": "POST",
+            "url": "{{baseUrl}}/auth/logout",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ]
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"HTTP 204\",()=>pm.response.to.have.status(204));",
+                  ""
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Registro incompleto — 400 esperado",
+          "request": {
+            "method": "POST",
+            "url": "{{baseUrl}}/auth/register/customer",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\"email\": \"{{customerEmail}}\", \"password\": \"{{customerPassword}}\"}"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"HTTP 400\",()=>pm.response.to.have.status(400));",
+                  ""
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Registrar cliente con todos los campos",
+          "request": {
+            "method": "POST",
+            "url": "{{baseUrl}}/auth/register/customer",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\"email\": \"{{customerEmail}}\", \"password\": \"{{customerPassword}}\", \"firstName\": \"Cliente\", \"lastName\": \"Local\", \"phone\": \"77778888\"}"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"HTTP 201\",()=>pm.response.to.have.status(201));",
+                  "pm.collectionVariables.set('customerId',pm.response.json().id);"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Login incompleto — 400 esperado",
+          "request": {
+            "method": "POST",
+            "url": "{{baseUrl}}/auth/login",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\"email\": \"\"}"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"HTTP 400\",()=>pm.response.to.have.status(400));",
+                  ""
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Cerrar sesión",
+          "request": {
+            "method": "POST",
+            "url": "{{baseUrl}}/auth/logout",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ]
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"HTTP 204\",()=>pm.response.to.have.status(204));",
+                  ""
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Login customer",
+          "request": {
+            "method": "POST",
+            "url": "{{baseUrl}}/auth/login",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\"email\": \"{{customerEmail}}\", \"password\": \"{{customerPassword}}\"}"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"HTTP 200\",()=>pm.response.to.have.status(200));",
+                  "pm.test('Sesión verificada',()=>pm.expect(pm.response.json().userId).to.be.a('string'));",
+                  "pm.collectionVariables.set('customerId',pm.response.json().userId);"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Sesión actual",
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/auth/me",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ]
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"HTTP 200\",()=>pm.response.to.have.status(200));",
+                  ""
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Sucursales",
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/branches",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ]
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"HTTP 200\",()=>pm.response.to.have.status(200));",
+                  ""
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "01 Menú H1-H3",
+      "item": [
+        {
+          "name": "Cerrar sesión",
+          "request": {
+            "method": "POST",
+            "url": "{{baseUrl}}/auth/logout",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ]
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"HTTP 204\",()=>pm.response.to.have.status(204));",
+                  ""
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Login manager",
+          "request": {
+            "method": "POST",
+            "url": "{{baseUrl}}/auth/login",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\"email\": \"{{managerEmail}}\", \"password\": \"{{managerPassword}}\"}"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"HTTP 200\",()=>pm.response.to.have.status(200));",
+                  "pm.test('Sesión verificada',()=>pm.expect(pm.response.json().userId).to.be.a('string'));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "H1 Crear platillo",
+          "request": {
+            "method": "POST",
+            "url": "{{baseUrl}}/branches/{{branchId}}/menu-items",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\"name\": \"Pasta {{runId}}\", \"description\": \"Platillo registrado desde Postman\", \"category\": \"MAIN_COURSE\", \"price\": \"10.00\"}"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"HTTP 201\",()=>pm.response.to.have.status(201));",
+                  "pm.collectionVariables.set('dishId',pm.response.json().id);"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Consultar platillo",
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/branches/{{branchId}}/menu-items/{{dishId}}",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ]
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"HTTP 200\",()=>pm.response.to.have.status(200));",
+                  ""
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "H1 Editar platillo",
+          "request": {
+            "method": "PATCH",
+            "url": "{{baseUrl}}/branches/{{branchId}}/menu-items/{{dishId}}",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\"description\": \"Pasta con salsa de tomate\"}"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"HTTP 200\",()=>pm.response.to.have.status(200));",
+                  ""
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Catálogo administrativo",
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/branches/{{branchId}}/menu-items?search={{runId}}",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ]
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"HTTP 200\",()=>pm.response.to.have.status(200));",
+                  ""
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "H2 Disponibilidad False",
+          "request": {
+            "method": "PATCH",
+            "url": "{{baseUrl}}/branches/{{branchId}}/menu-items/{{dishId}}/availability",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\"isAvailable\": false}"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"HTTP 200\",()=>pm.response.to.have.status(200));",
+                  ""
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "H2 Disponibilidad True",
+          "request": {
+            "method": "PATCH",
+            "url": "{{baseUrl}}/branches/{{branchId}}/menu-items/{{dishId}}/availability",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\"isAvailable\": true}"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"HTTP 200\",()=>pm.response.to.have.status(200));",
+                  ""
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Cerrar sesión",
+          "request": {
+            "method": "POST",
+            "url": "{{baseUrl}}/auth/logout",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ]
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"HTTP 204\",()=>pm.response.to.have.status(204));",
+                  ""
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Login customer",
+          "request": {
+            "method": "POST",
+            "url": "{{baseUrl}}/auth/login",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\"email\": \"{{customerEmail}}\", \"password\": \"{{customerPassword}}\"}"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"HTTP 200\",()=>pm.response.to.have.status(200));",
+                  "pm.test('Sesión verificada',()=>pm.expect(pm.response.json().userId).to.be.a('string'));",
+                  "pm.collectionVariables.set('customerId',pm.response.json().userId);"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "H3 Menú disponible",
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/branches/{{branchId}}/menu?search={{runId}}",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ]
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"HTTP 200\",()=>pm.response.to.have.status(200));",
+                  ""
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "02 Reservaciones H10-H12",
+      "item": [
+        {
+          "name": "Horarios disponibles",
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/branches/{{branchId}}/reservation-availability?date={{reservationDate}}&partySize=2",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ]
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"HTTP 200\",()=>pm.response.to.have.status(200));",
+                  "const slot=pm.response.json().slots.find(x=>x.available);pm.test('Horario disponible',()=>pm.expect(slot).to.exist);if(slot)pm.collectionVariables.set('reservationTime',slot.time);"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "H10 Reservar",
+          "request": {
+            "method": "POST",
+            "url": "{{baseUrl}}/reservations",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\"branchId\": \"{{branchId}}\", \"date\": \"{{reservationDate}}\", \"time\": \"{{reservationTime}}\", \"partySize\": 2}"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"HTTP 201\",()=>pm.response.to.have.status(201));",
+                  "pm.collectionVariables.set('reservationId',pm.response.json().id);"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "H12 Mis reservaciones",
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/me/reservations",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ]
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"HTTP 200\",()=>pm.response.to.have.status(200));",
+                  ""
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "H12 Cancelar propia",
+          "request": {
+            "method": "PUT",
+            "url": "{{baseUrl}}/me/reservations/{{reservationId}}/cancel",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{}"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"HTTP 200\",()=>pm.response.to.have.status(200));",
+                  ""
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "H10 Reservar para gestión",
+          "request": {
+            "method": "POST",
+            "url": "{{baseUrl}}/reservations",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\"branchId\": \"{{branchId}}\", \"date\": \"{{reservationDate}}\", \"time\": \"{{reservationTime}}\", \"partySize\": 2}"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"HTTP 201\",()=>pm.response.to.have.status(201));",
+                  "pm.collectionVariables.set('reservationId',pm.response.json().id);"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Cerrar sesión",
+          "request": {
+            "method": "POST",
+            "url": "{{baseUrl}}/auth/logout",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ]
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"HTTP 204\",()=>pm.response.to.have.status(204));",
+                  ""
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Login manager",
+          "request": {
+            "method": "POST",
+            "url": "{{baseUrl}}/auth/login",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\"email\": \"{{managerEmail}}\", \"password\": \"{{managerPassword}}\"}"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"HTTP 200\",()=>pm.response.to.have.status(200));",
+                  "pm.test('Sesión verificada',()=>pm.expect(pm.response.json().userId).to.be.a('string'));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "H11 Ocupación",
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/management/branches/{{branchId}}/occupancy?date={{reservationDate}}",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ]
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"HTTP 200\",()=>pm.response.to.have.status(200));",
+                  ""
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "H11 Cancelar por gerencia",
+          "request": {
+            "method": "PUT",
+            "url": "{{baseUrl}}/reservations/{{reservationId}}/cancel",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{}"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"HTTP 200\",()=>pm.response.to.have.status(200));",
+                  ""
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "03 Inventario H13-H15",
+      "item": [
+        {
+          "name": "H13 Inventario",
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/management/branches/{{branchId}}/inventory",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ]
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"HTTP 200\",()=>pm.response.to.have.status(200));",
+                  "const a=pm.response.json();pm.test('Insumos disponibles',()=>pm.expect(a.length).to.be.above(0));if(a.length){pm.collectionVariables.set('inventoryItemId',a[0].id);pm.collectionVariables.set('originalStock',a[0].currentStock);}"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "H14 Movimiento IN",
+          "request": {
+            "method": "POST",
+            "url": "{{baseUrl}}/management/inventory/movements",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\"branchId\": \"{{branchId}}\", \"itemId\": \"{{inventoryItemId}}\", \"quantity\": 1, \"type\": \"IN\", \"reason\": \"Verificación operativa {{runId}}\"}"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"HTTP 201\",()=>pm.response.to.have.status(201));",
+                  ""
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "H14 Movimiento OUT",
+          "request": {
+            "method": "POST",
+            "url": "{{baseUrl}}/management/inventory/movements",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\"branchId\": \"{{branchId}}\", \"itemId\": \"{{inventoryItemId}}\", \"quantity\": 1, \"type\": \"OUT\", \"reason\": \"Verificación operativa {{runId}}\"}"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"HTTP 201\",()=>pm.response.to.have.status(201));",
+                  ""
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Existencia conservada tras IN y OUT",
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/management/branches/{{branchId}}/inventory",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ]
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"HTTP 200\",()=>pm.response.to.have.status(200));",
+                  "const item=pm.response.json().find(x=>x.id===pm.collectionVariables.get('inventoryItemId'));pm.test('Existencia conservada',()=>pm.expect(item.currentStock).to.eql(Number(pm.collectionVariables.get('originalStock'))));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "H15 Alertas",
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/management/branches/{{branchId}}/inventory/alerts",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ]
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"HTTP 200\",()=>pm.response.to.have.status(200));",
+                  ""
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "04 Pedido para llevar, cuenta, pago y lealtad H18-H21",
+      "item": [
+        {
+          "name": "Cerrar sesión",
+          "request": {
+            "method": "POST",
+            "url": "{{baseUrl}}/auth/logout",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ]
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"HTTP 204\",()=>pm.response.to.have.status(204));",
+                  ""
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Login customer",
+          "request": {
+            "method": "POST",
+            "url": "{{baseUrl}}/auth/login",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\"email\": \"{{customerEmail}}\", \"password\": \"{{customerPassword}}\"}"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"HTTP 200\",()=>pm.response.to.have.status(200));",
+                  "pm.test('Sesión verificada',()=>pm.expect(pm.response.json().userId).to.be.a('string'));",
+                  "pm.collectionVariables.set('customerId',pm.response.json().userId);"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "H4 Pedido del cliente",
+          "request": {
+            "method": "POST",
+            "url": "{{baseUrl}}/orders/customer",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\"branchId\": \"{{branchId}}\", \"type\": \"TAKEAWAY\", \"items\": [{\"dishId\": \"{{dishId}}\", \"quantity\": 1}]}"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"HTTP 201\",()=>pm.response.to.have.status(201));",
+                  "pm.collectionVariables.set('orderId',pm.response.json().id);"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "H16 Cuenta",
+          "request": {
+            "method": "POST",
+            "url": "{{baseUrl}}/branches/{{branchId}}/bills",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\"orderId\": \"{{orderId}}\"}"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"HTTP 201\",()=>pm.response.to.have.status(201));",
+                  "pm.collectionVariables.set('billId',pm.response.json().id);"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Consultar cuenta",
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/bills/{{billId}}",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ]
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"HTTP 200\",()=>pm.response.to.have.status(200));",
+                  ""
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Pago rechazado — FAILED esperado",
+          "request": {
+            "method": "POST",
+            "url": "{{baseUrl}}/bills/{{billId}}/payments",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "idempotency-key",
+                "value": "{{$guid}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\"cardHolder\": \"Cliente Local\", \"cardNumber\": \"4000000000000002\", \"expMonth\": 12, \"expYear\": {{cardYear}}, \"cvv\": \"123\"}"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"HTTP 200\",()=>pm.response.to.have.status(200));",
+                  "const result=pm.response.json();pm.test(\"Rechazo esperado\",()=>pm.expect(result.status).to.eql(\"FAILED\"));",
+                  "pm.test(\"FAILED conserva paymentId y no genera comprobante\",()=>{pm.expect(result.paymentId).to.be.a(\"string\");pm.expect(result.receiptId).to.eql(null);});",
+                  "pm.collectionVariables.set(\"h19FailedPaymentId\",result.paymentId);"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Pago aprobado por simulador académico",
+          "request": {
+            "method": "POST",
+            "url": "{{baseUrl}}/bills/{{billId}}/payments",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "idempotency-key",
+                "value": "{{h19PaidIdempotencyKey}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\"cardHolder\": \"Cliente Local\", \"cardNumber\": \"4242424242424242\", \"expMonth\": 12, \"expYear\": {{cardYear}}, \"cvv\": \"123\"}"
+            }
+          },
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "if(!pm.collectionVariables.get(\"h19PaidIdempotencyKey\"))pm.collectionVariables.set(\"h19PaidIdempotencyKey\",pm.variables.replaceIn(\"{{$guid}}\"));"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"HTTP 200\",()=>pm.response.to.have.status(200));",
+                  "const result=pm.response.json();pm.test(\"Pago PAID y comprobante\",()=>{pm.expect(result.status).to.eql(\"PAID\");pm.expect(result.paymentId).to.be.a(\"string\");pm.expect(result.receiptId).to.be.a(\"string\");});",
+                  "pm.collectionVariables.set(\"paymentId\",result.paymentId);pm.collectionVariables.set(\"receiptId\",result.receiptId);",
+                  "pm.test(\"Respuesta PAID contiene los IDs necesarios para revisar H19 en PostgreSQL\",()=>{pm.expect(pm.collectionVariables.get(\"paymentId\")).to.eql(result.paymentId);});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "H19 Reintento idempotente del pago PAID",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "idempotency-key",
+                "value": "{{h19PaidIdempotencyKey}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\"cardHolder\":\"Cliente Local\",\"cardNumber\":\"4242424242424242\",\"expMonth\":12,\"expYear\":{{cardYear}},\"cvv\":\"123\"}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": "{{baseUrl}}/bills/{{billId}}/payments",
+            "description": "Repite exactamente el pago con la misma clave. El backend debe responder con el paymentId/receiptId ya emitidos y no duplicar las filas EARN de H19."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Reintento responde 200\",()=>pm.response.to.have.status(200));",
+                  "const result=pm.response.json();pm.test(\"Reutiliza el pago y comprobante originales\",()=>{pm.expect(result.status).to.eql(\"PAID\");pm.expect(result.paymentId).to.eql(pm.collectionVariables.get(\"paymentId\"));pm.expect(result.receiptId).to.eql(pm.collectionVariables.get(\"receiptId\"));});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "H19 No existe endpoint público de acumulación",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\"paymentId\":\"{{paymentId}}\",\"orderId\":\"{{orderId}}\",\"points\":999999}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": "{{baseUrl}}/loyalty/accumulate",
+            "description": "H19 solo acumula desde BillingService dentro de la transacción de pago. Esta petición debe devolver 404; no acredita puntos."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"La acumulación arbitraria no está expuesta por HTTP (404)\",()=>pm.response.to.have.status(404));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "H20 Consultar saldo de lealtad",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{baseUrl}}/me/loyalty/balance",
+            "description": "Consulta exclusivamente el saldo del cliente de la cookie actual. No recibe customerId."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Saldo H20 responde 200\",()=>pm.response.to.have.status(200));",
+                  "const balance=pm.response.json();",
+                  "pm.test(\"Contrato y aritmética del saldo H20\",()=>{pm.expect(balance).to.have.all.keys(\"balance\",\"reservedPoints\",\"availableBalance\");for(const key of [\"balance\",\"reservedPoints\",\"availableBalance\"]){pm.expect(balance[key]).to.be.a(\"number\");pm.expect(Number.isInteger(balance[key])).to.eql(true);}pm.expect(balance.balance).to.be.at.least(0);pm.expect(balance.reservedPoints).to.be.at.least(0);pm.expect(balance.availableBalance).to.eql(balance.balance-balance.reservedPoints);});",
+                  "pm.collectionVariables.set(\"h20Balance\",String(balance.balance));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "H20 Consultar historial de lealtad — página 1",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{baseUrl}}/me/loyalty/history?page=1",
+            "description": "Lista solo movimientos confirmados del cliente autenticado, de más reciente a más antiguo; cada página contiene hasta diez filas."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Historial H20 responde 200\",()=>pm.response.to.have.status(200));",
+                  "const history=pm.response.json();",
+                  "pm.test(\"Contrato, paginación y movimientos H20\",()=>{pm.expect(history).to.have.all.keys(\"data\",\"total\",\"page\",\"pageSize\");pm.expect(history.data).to.be.an(\"array\");pm.expect(history.total).to.be.a(\"number\");pm.expect(history.page).to.eql(1);pm.expect(history.pageSize).to.eql(10);pm.expect(history.data.length).to.be.at.most(10);history.data.forEach(row=>{pm.expect(row.id).to.be.a(\"string\");pm.expect(row.type).to.be.oneOf([\"EARN\",\"REDEEM\"]);pm.expect(row.points).to.be.a(\"number\");pm.expect(row.createdAt).to.be.a(\"string\");pm.expect(Number.isNaN(Date.parse(row.createdAt))).to.eql(false);if(row.type===\"EARN\"){pm.expect(row.points).to.be.above(0);pm.expect(row.paymentId).to.be.a(\"string\");pm.expect(row.orderId).to.be.a(\"string\");}else{pm.expect(row.points).to.be.below(0);pm.expect(row.redemptionId).to.be.a(\"string\");}});});",
+                  "pm.test(\"Historial H20 está ordenado de forma estable\",()=>{for(let index=1;index<history.data.length;index++){const previous=history.data[index-1],current=history.data[index],byDate=Date.parse(previous.createdAt)-Date.parse(current.createdAt);pm.expect(byDate).to.be.at.least(0);if(byDate===0)pm.expect(previous.id.localeCompare(current.id)).to.be.at.least(0);}});",
+                  "pm.collectionVariables.set(\"h20HistoryTotal\",String(history.total));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "H21 Canje sobre cuenta pagada — 409 esperado",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\"billId\":\"{{billId}}\",\"benefitId\":\"{{customerId}}\"}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": "{{baseUrl}}/loyalty/redeem",
+            "description": "La cuenta ya fue pagada en este flujo; H21 debe rechazar el canje y no crear una reserva."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Canje H21 en cuenta cerrada responde 409\",()=>pm.response.to.have.status(409));",
+                  "pm.test(\"H21 informa BILL_NOT_OPEN\",()=>{const error=pm.response.json();pm.expect(error.code).to.eql(\"BILL_NOT_OPEN\");pm.expect(error.field).to.eql(\"billId\");});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "H21 Liberar canje inexistente — 404 esperado",
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": "{{baseUrl}}/loyalty/redeem/{{paymentId}}",
+            "description": "El paymentId no es un redemptionId. La petición comprueba que el endpoint no libera ni modifica una cuenta ajena o inexistente."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Liberar canje inexistente responde 404\",()=>pm.response.to.have.status(404));",
+                  "pm.test(\"H21 informa REDEMPTION_NOT_FOUND\",()=>pm.expect(pm.response.json().code).to.eql(\"REDEMPTION_NOT_FOUND\"));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "H18 Mis comprobantes",
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/me/receipts",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ]
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"HTTP 200\",()=>pm.response.to.have.status(200));",
+                  "const body=pm.response.json();const receipt=(body.data||[]).find(row=>row.id===pm.collectionVariables.get('receiptId'));",
+                  "pm.test('Contrato H18 y recibo recién emitido',()=>{pm.expect(body.data).to.be.an('array');pm.expect(body.total).to.be.a('number');pm.expect(body.pageSize).to.eql(10);pm.expect(receipt,'El recibo del pago debe estar en la lista').to.exist;pm.expect(receipt.number).to.be.a('string');pm.expect(receipt.issuedAt).to.be.a('string');pm.expect(receipt.branchName).to.be.a('string');pm.expect(receipt.total).to.be.a('string');});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "H18 Comprobante",
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/me/receipts/{{receiptId}}",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ]
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"HTTP 200\",()=>pm.response.to.have.status(200));",
+                  "const receipt=pm.response.json();",
+                  "pm.test('Detalle propio y snapshot inmutable',()=>{pm.expect(receipt.id).to.eql(pm.collectionVariables.get('receiptId'));pm.expect(receipt.clientId).to.eql(pm.collectionVariables.get('customerId'));pm.expect(receipt.paymentId).to.be.a('string');pm.expect(receipt.number).to.be.a('string');pm.expect(receipt.cardLast4).to.eql('4242');pm.expect(receipt.subtotal).to.be.a('string');pm.expect(receipt.discountAmount).to.be.a('string');pm.expect(receipt.taxAmount).to.be.a('string');pm.expect(receipt.total).to.be.a('string');pm.expect(receipt.snapshot).to.be.an('object');pm.expect(receipt.snapshot.items).to.be.an('array').that.is.not.empty;pm.expect(receipt.snapshot.items[0]).to.have.property('unitPrice');pm.expect(receipt.snapshot.items[0]).to.have.property('lineTotal');});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "H18 PDF",
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/me/receipts/{{receiptId}}/pdf",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ]
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"HTTP 200\",()=>pm.response.to.have.status(200));",
+                  "pm.test('PDF descargable',()=>{pm.expect(pm.response.headers.get('Content-Type')).to.include('application/pdf');pm.expect(pm.response.headers.get('Content-Disposition')).to.include('.pdf');});"
+                ]
+              }
+            }
+          ]
+        }
+      ],
+      "description": "Flujo de cliente para pedido TAKEAWAY → cuenta → pago FAILED/PAID → comprobante. H19 acredita EARN internamente en la transacción PAID y no expone endpoint de acumulación. Para ver puntos, consultar la base según postman/USO-H19.md."
+    },
+    {
+      "name": "05 Cocina, notificaciones y entrega",
+      "item": [
+        {
+          "name": "Cerrar sesión",
+          "request": {
+            "method": "POST",
+            "url": "{{baseUrl}}/auth/logout",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ]
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"HTTP 204\",()=>pm.response.to.have.status(204));",
+                  ""
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Login kitchen",
+          "request": {
+            "method": "POST",
+            "url": "{{baseUrl}}/auth/login",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\"email\": \"{{kitchenEmail}}\", \"password\": \"{{kitchenPassword}}\"}"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"HTTP 200\",()=>pm.response.to.have.status(200));",
+                  "pm.test('Sesión verificada',()=>pm.expect(pm.response.json().userId).to.be.a('string'));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "H6 Cola pendiente",
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/branches/{{branchId}}/kitchen/orders",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ]
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"HTTP 200\",()=>pm.response.to.have.status(200));",
+                  ""
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Avisos de cocina",
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/notifications?sourceModule=ORDERS",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ]
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"HTTP 200\",()=>pm.response.to.have.status(200));",
+                  ""
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "H7 Tomar orderId",
+          "request": {
+            "method": "PATCH",
+            "url": "{{baseUrl}}/branches/{{branchId}}/kitchen/orders/{{orderId}}/take",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{}"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"HTTP 200\",()=>pm.response.to.have.status(200));",
+                  ""
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "H7 Liberar orderId",
+          "request": {
+            "method": "PATCH",
+            "url": "{{baseUrl}}/branches/{{branchId}}/kitchen/orders/{{orderId}}/release",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{}"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"HTTP 200\",()=>pm.response.to.have.status(200));",
+                  ""
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "H7 Retomar orderId",
+          "request": {
+            "method": "PATCH",
+            "url": "{{baseUrl}}/branches/{{branchId}}/kitchen/orders/{{orderId}}/take",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{}"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"HTTP 200\",()=>pm.response.to.have.status(200));",
+                  ""
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "H6/H30 Preparación orderId",
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/branches/{{branchId}}/kitchen/orders?status=IN_PREPARATION",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ]
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"HTTP 200\",()=>pm.response.to.have.status(200));",
+                  "const row=pm.response.json().items.find(x=>x.orderId===pm.collectionVariables.get('orderId'));pm.test('Comanda encontrada',()=>pm.expect(row).to.exist);if(row)pm.collectionVariables.set('readyItemId',row.items[0].id);"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "H8 Marcar listo orderId",
+          "request": {
+            "method": "PATCH",
+            "url": "{{baseUrl}}/branches/{{branchId}}/kitchen/orders/{{orderId}}/items/{{readyItemId}}/ready",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{}"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"HTTP 200\",()=>pm.response.to.have.status(200));",
+                  "pm.test('Pedido listo',()=>pm.expect(pm.response.json().orderStatus).to.eql('READY'));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Cerrar sesión",
+          "request": {
+            "method": "POST",
+            "url": "{{baseUrl}}/auth/logout",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ]
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"HTTP 204\",()=>pm.response.to.have.status(204));",
+                  ""
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Login waiter",
+          "request": {
+            "method": "POST",
+            "url": "{{baseUrl}}/auth/login",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\"email\": \"{{waiterEmail}}\", \"password\": \"{{waiterPassword}}\"}"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"HTTP 200\",()=>pm.response.to.have.status(200));",
+                  "pm.test('Sesión verificada',()=>pm.expect(pm.response.json().userId).to.be.a('string'));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "H29 Listos para recoger",
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/branches/{{branchId}}/orders?status=READY",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ]
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"HTTP 200\",()=>pm.response.to.have.status(200));",
+                  ""
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Avisos de mesero",
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/notifications?sourceModule=KITCHEN",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ]
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"HTTP 200\",()=>pm.response.to.have.status(200));",
+                  ""
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "H9 Recoger orderId",
+          "request": {
+            "method": "PATCH",
+            "url": "{{baseUrl}}/branches/{{branchId}}/orders/{{orderId}}/pickup",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{}"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"HTTP 200\",()=>pm.response.to.have.status(200));",
+                  ""
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "H9 Entregar orderId",
+          "request": {
+            "method": "PATCH",
+            "url": "{{baseUrl}}/branches/{{branchId}}/orders/{{orderId}}/deliver",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{}"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"HTTP 200\",()=>pm.response.to.have.status(200));",
+                  ""
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Seguimiento anterior",
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/orders",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ]
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"HTTP 200\",()=>pm.response.to.have.status(200));",
+                  ""
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "06 Reseñas H23-H25",
+      "item": [
+        {
+          "name": "Cerrar sesión",
+          "request": {
+            "method": "POST",
+            "url": "{{baseUrl}}/auth/logout",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ]
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"HTTP 204\",()=>pm.response.to.have.status(204));",
+                  ""
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Login customer",
+          "request": {
+            "method": "POST",
+            "url": "{{baseUrl}}/auth/login",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\"email\": \"{{customerEmail}}\", \"password\": \"{{customerPassword}}\"}"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"HTTP 200\",()=>pm.response.to.have.status(200));",
+                  "pm.test('Sesión verificada',()=>pm.expect(pm.response.json().userId).to.be.a('string'));",
+                  "pm.collectionVariables.set('customerId',pm.response.json().userId);"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "H23 Elegibilidad",
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/orders/{{orderId}}/review-eligibility",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ]
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"HTTP 200\",()=>pm.response.to.have.status(200));",
+                  "pm.test('Elegible',()=>pm.expect(pm.response.json().canReview).to.eql(true));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "H23 Reseñar",
+          "request": {
+            "method": "POST",
+            "url": "{{baseUrl}}/orders/{{orderId}}/reviews",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\"rating\": 5, \"comment\": \"Pedido recibido correctamente.\"}"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"HTTP 201\",()=>pm.response.to.have.status(201));",
+                  ""
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Reseña duplicada — 409 esperado",
+          "request": {
+            "method": "POST",
+            "url": "{{baseUrl}}/orders/{{orderId}}/reviews",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\"rating\": 5}"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"HTTP 409\",()=>pm.response.to.have.status(409));",
+                  ""
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "H25 Reseñas públicas",
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/branches/{{branchId}}/reviews?rating=5&page=1",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ]
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"HTTP 200\",()=>pm.response.to.have.status(200));",
+                  "for(const row of pm.response.json().data)pm.test('Campos públicos',()=>pm.expect(Object.keys(row).sort()).to.eql(['comment','createdAt','id','rating']));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "H26-H28 Notificaciones",
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/notifications",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ]
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"HTTP 200\",()=>pm.response.to.have.status(200));",
+                  ""
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Cerrar sesión",
+          "request": {
+            "method": "POST",
+            "url": "{{baseUrl}}/auth/logout",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ]
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"HTTP 204\",()=>pm.response.to.have.status(204));",
+                  ""
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Login manager",
+          "request": {
+            "method": "POST",
+            "url": "{{baseUrl}}/auth/login",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\"email\": \"{{managerEmail}}\", \"password\": \"{{managerPassword}}\"}"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"HTTP 200\",()=>pm.response.to.have.status(200));",
+                  "pm.test('Sesión verificada',()=>pm.expect(pm.response.json().userId).to.be.a('string'));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "H24 Promedio",
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/management/branches/{{branchId}}/ratings/summary",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ]
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"HTTP 200\",()=>pm.response.to.have.status(200));",
+                  ""
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "07 Mesa y vinculación H4-H5",
+      "item": [
+        {
+          "name": "Cerrar sesión",
+          "request": {
+            "method": "POST",
+            "url": "{{baseUrl}}/auth/logout",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ]
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"HTTP 204\",()=>pm.response.to.have.status(204));",
+                  ""
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Login customer",
+          "request": {
+            "method": "POST",
+            "url": "{{baseUrl}}/auth/login",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\"email\": \"{{customerEmail}}\", \"password\": \"{{customerPassword}}\"}"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"HTTP 200\",()=>pm.response.to.have.status(200));",
+                  "pm.test('Sesión verificada',()=>pm.expect(pm.response.json().userId).to.be.a('string'));",
+                  "pm.collectionVariables.set('customerId',pm.response.json().userId);"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Buscar mesa disponible",
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/branches/{{branchId}}/tables",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ]
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"HTTP 200\",()=>pm.response.to.have.status(200));",
+                  "const row=pm.response.json().find(x=>x.status==='AVAILABLE');pm.test('Mesa disponible',()=>pm.expect(row).to.exist);if(row)pm.collectionVariables.set('tableId',row.id);"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Seleccionar mesa",
+          "request": {
+            "method": "POST",
+            "url": "{{baseUrl}}/branches/{{branchId}}/tables/{{tableId}}/select",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{}"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"HTTP 201\",()=>pm.response.to.have.status(201));",
+                  ""
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Mi selección",
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/me/table-selection",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ]
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"HTTP 200\",()=>pm.response.to.have.status(200));",
+                  ""
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Liberar sin pedidos",
+          "request": {
+            "method": "DELETE",
+            "url": "{{baseUrl}}/branches/{{branchId}}/tables/{{tableId}}/select",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ]
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"HTTP 200\",()=>pm.response.to.have.status(200));",
+                  ""
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Seleccionar nuevamente",
+          "request": {
+            "method": "POST",
+            "url": "{{baseUrl}}/branches/{{branchId}}/tables/{{tableId}}/select",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{}"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"HTTP 201\",()=>pm.response.to.have.status(201));",
+                  ""
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Pedido de cliente en mesa",
+          "request": {
+            "method": "POST",
+            "url": "{{baseUrl}}/orders/customer",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\"branchId\": \"{{branchId}}\", \"type\": \"DINE_IN\", \"tableId\": \"{{tableId}}\", \"items\": [{\"dishId\": \"{{dishId}}\", \"quantity\": 1}]}"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"HTTP 201\",()=>pm.response.to.have.status(201));",
+                  "pm.collectionVariables.set('tableCustomerOrderId',pm.response.json().id);"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Cerrar sesión",
+          "request": {
+            "method": "POST",
+            "url": "{{baseUrl}}/auth/logout",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ]
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"HTTP 204\",()=>pm.response.to.have.status(204));",
+                  ""
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Login waiter",
+          "request": {
+            "method": "POST",
+            "url": "{{baseUrl}}/auth/login",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\"email\": \"{{waiterEmail}}\", \"password\": \"{{waiterPassword}}\"}"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"HTTP 200\",()=>pm.response.to.have.status(200));",
+                  "pm.test('Sesión verificada',()=>pm.expect(pm.response.json().userId).to.be.a('string'));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "H4 Pedido de mesero",
+          "request": {
+            "method": "POST",
+            "url": "{{baseUrl}}/orders",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\"branchId\": \"{{branchId}}\", \"type\": \"DINE_IN\", \"tableId\": \"{{tableId}}\", \"items\": [{\"dishId\": \"{{dishId}}\", \"quantity\": 1}]}"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"HTTP 201\",()=>pm.response.to.have.status(201));",
+                  "pm.collectionVariables.set('waiterOrderId',pm.response.json().id);"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "H5 Generar código",
+          "request": {
+            "method": "POST",
+            "url": "{{baseUrl}}/orders/{{waiterOrderId}}/link-code",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{}"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"HTTP 201\",()=>pm.response.to.have.status(201));",
+                  "pm.collectionVariables.set('linkCode',pm.response.json().code);"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Resumen de mesa",
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/branches/{{branchId}}/tables/{{tableId}}/billing-summary",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ]
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"HTTP 200\",()=>pm.response.to.have.status(200));",
+                  ""
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Cerrar sesión",
+          "request": {
+            "method": "POST",
+            "url": "{{baseUrl}}/auth/logout",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ]
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"HTTP 204\",()=>pm.response.to.have.status(204));",
+                  ""
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Login customer",
+          "request": {
+            "method": "POST",
+            "url": "{{baseUrl}}/auth/login",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\"email\": \"{{customerEmail}}\", \"password\": \"{{customerPassword}}\"}"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"HTTP 200\",()=>pm.response.to.have.status(200));",
+                  "pm.test('Sesión verificada',()=>pm.expect(pm.response.json().userId).to.be.a('string'));",
+                  "pm.collectionVariables.set('customerId',pm.response.json().userId);"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "H5 Ver código",
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/orders/link-code/{{linkCode}}",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ]
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"HTTP 200\",()=>pm.response.to.have.status(200));",
+                  ""
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "H5 Vincular",
+          "request": {
+            "method": "POST",
+            "url": "{{baseUrl}}/orders/link-code/confirm",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\"code\": \"{{linkCode}}\"}"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"HTTP 201\",()=>pm.response.to.have.status(201));",
+                  ""
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "08 Preparación y cierre de mesa",
+      "item": [
+        {
+          "name": "Cerrar sesión",
+          "request": {
+            "method": "POST",
+            "url": "{{baseUrl}}/auth/logout",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ]
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"HTTP 204\",()=>pm.response.to.have.status(204));",
+                  ""
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Login kitchen",
+          "request": {
+            "method": "POST",
+            "url": "{{baseUrl}}/auth/login",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\"email\": \"{{kitchenEmail}}\", \"password\": \"{{kitchenPassword}}\"}"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"HTTP 200\",()=>pm.response.to.have.status(200));",
+                  "pm.test('Sesión verificada',()=>pm.expect(pm.response.json().userId).to.be.a('string'));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "H7 Tomar tableCustomerOrderId",
+          "request": {
+            "method": "PATCH",
+            "url": "{{baseUrl}}/branches/{{branchId}}/kitchen/orders/{{tableCustomerOrderId}}/take",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{}"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"HTTP 200\",()=>pm.response.to.have.status(200));",
+                  ""
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "H6/H30 Preparación tableCustomerOrderId",
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/branches/{{branchId}}/kitchen/orders?status=IN_PREPARATION",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ]
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"HTTP 200\",()=>pm.response.to.have.status(200));",
+                  "const row=pm.response.json().items.find(x=>x.orderId===pm.collectionVariables.get('tableCustomerOrderId'));pm.test('Comanda encontrada',()=>pm.expect(row).to.exist);if(row)pm.collectionVariables.set('readyItemId',row.items[0].id);"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "H8 Marcar listo tableCustomerOrderId",
+          "request": {
+            "method": "PATCH",
+            "url": "{{baseUrl}}/branches/{{branchId}}/kitchen/orders/{{tableCustomerOrderId}}/items/{{readyItemId}}/ready",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{}"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"HTTP 200\",()=>pm.response.to.have.status(200));",
+                  "pm.test('Pedido listo',()=>pm.expect(pm.response.json().orderStatus).to.eql('READY'));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "H7 Tomar waiterOrderId",
+          "request": {
+            "method": "PATCH",
+            "url": "{{baseUrl}}/branches/{{branchId}}/kitchen/orders/{{waiterOrderId}}/take",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{}"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"HTTP 200\",()=>pm.response.to.have.status(200));",
+                  ""
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "H6/H30 Preparación waiterOrderId",
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/branches/{{branchId}}/kitchen/orders?status=IN_PREPARATION",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ]
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"HTTP 200\",()=>pm.response.to.have.status(200));",
+                  "const row=pm.response.json().items.find(x=>x.orderId===pm.collectionVariables.get('waiterOrderId'));pm.test('Comanda encontrada',()=>pm.expect(row).to.exist);if(row)pm.collectionVariables.set('readyItemId',row.items[0].id);"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "H8 Marcar listo waiterOrderId",
+          "request": {
+            "method": "PATCH",
+            "url": "{{baseUrl}}/branches/{{branchId}}/kitchen/orders/{{waiterOrderId}}/items/{{readyItemId}}/ready",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{}"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"HTTP 200\",()=>pm.response.to.have.status(200));",
+                  "pm.test('Pedido listo',()=>pm.expect(pm.response.json().orderStatus).to.eql('READY'));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Cerrar sesión",
+          "request": {
+            "method": "POST",
+            "url": "{{baseUrl}}/auth/logout",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ]
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"HTTP 204\",()=>pm.response.to.have.status(204));",
+                  ""
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Login waiter",
+          "request": {
+            "method": "POST",
+            "url": "{{baseUrl}}/auth/login",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\"email\": \"{{waiterEmail}}\", \"password\": \"{{waiterPassword}}\"}"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"HTTP 200\",()=>pm.response.to.have.status(200));",
+                  "pm.test('Sesión verificada',()=>pm.expect(pm.response.json().userId).to.be.a('string'));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "H9 Recoger tableCustomerOrderId",
+          "request": {
+            "method": "PATCH",
+            "url": "{{baseUrl}}/branches/{{branchId}}/orders/{{tableCustomerOrderId}}/pickup",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{}"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"HTTP 200\",()=>pm.response.to.have.status(200));",
+                  ""
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "H9 Entregar tableCustomerOrderId",
+          "request": {
+            "method": "PATCH",
+            "url": "{{baseUrl}}/branches/{{branchId}}/orders/{{tableCustomerOrderId}}/deliver",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{}"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"HTTP 200\",()=>pm.response.to.have.status(200));",
+                  ""
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "H9 Recoger waiterOrderId",
+          "request": {
+            "method": "PATCH",
+            "url": "{{baseUrl}}/branches/{{branchId}}/orders/{{waiterOrderId}}/pickup",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{}"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"HTTP 200\",()=>pm.response.to.have.status(200));",
+                  ""
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "H9 Entregar waiterOrderId",
+          "request": {
+            "method": "PATCH",
+            "url": "{{baseUrl}}/branches/{{branchId}}/orders/{{waiterOrderId}}/deliver",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{}"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"HTTP 200\",()=>pm.response.to.have.status(200));",
+                  ""
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Resumen listo para cerrar",
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/branches/{{branchId}}/tables/{{tableId}}/billing-summary",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ]
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"HTTP 200\",()=>pm.response.to.have.status(200));",
+                  "pm.test('Puede cerrar',()=>pm.expect(pm.response.json().canClose).to.eql(true));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Cerrar cuenta de mesa",
+          "request": {
+            "method": "POST",
+            "url": "{{baseUrl}}/branches/{{branchId}}/bills",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\"tableId\": \"{{tableId}}\"}"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"HTTP 201\",()=>pm.response.to.have.status(201));",
+                  "pm.collectionVariables.set('tableBillId',pm.response.json().id);"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Pago aprobado por simulador académico",
+          "request": {
+            "method": "POST",
+            "url": "{{baseUrl}}/bills/{{tableBillId}}/payments",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "idempotency-key",
+                "value": "{{$guid}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\"cardHolder\": \"Cliente Local\", \"cardNumber\": \"4242424242424242\", \"expMonth\": 12, \"expYear\": {{cardYear}}, \"cvv\": \"123\"}"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"HTTP 200\",()=>pm.response.to.have.status(200));",
+                  "pm.collectionVariables.set('tableReceiptId',pm.response.json().receiptId);pm.test('Pago aprobado',()=>pm.expect(pm.response.json().status).to.eql('PAID'));",
+                  "pm.test('Pago aprobado con recibo',()=>{pm.expect(pm.response.json().status).to.eql('PAID');pm.expect(pm.response.json().receiptId).to.be.a('string');});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Comprobante de sucursal",
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/branches/{{branchId}}/receipts/{{tableReceiptId}}",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ]
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"HTTP 200\",()=>pm.response.to.have.status(200));",
+                  ""
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "PDF de sucursal",
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/branches/{{branchId}}/receipts/{{tableReceiptId}}/pdf",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ]
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"HTTP 200\",()=>pm.response.to.have.status(200));",
+                  "pm.test('PDF',()=>pm.expect(pm.response.headers.get('Content-Type')).to.include('application/pdf'));"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "09 Reportes H31-H35",
+      "item": [
+        {
+          "name": "Cerrar sesión",
+          "request": {
+            "method": "POST",
+            "url": "{{baseUrl}}/auth/logout",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ]
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"HTTP 204\",()=>pm.response.to.have.status(204));",
+                  ""
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Login general",
+          "request": {
+            "method": "POST",
+            "url": "{{baseUrl}}/auth/login",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\"email\": \"{{generalEmail}}\", \"password\": \"{{generalPassword}}\"}"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"HTTP 200\",()=>pm.response.to.have.status(200));",
+                  "pm.test('Sesión verificada',()=>pm.expect(pm.response.json().userId).to.be.a('string'));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "H31 Ventas",
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/analytics/sales?from={{from}}&to={{to}}",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ]
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"HTTP 200\",()=>pm.response.to.have.status(200));",
+                  ""
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "H32 Comparación",
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/analytics/branches/compare?branchIds={{branchIds}}&from={{from}}&to={{to}}",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ]
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"HTTP 200\",()=>pm.response.to.have.status(200));",
+                  ""
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "H33 Platillos",
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/analytics/branches/{{branchId}}/top-dishes?limit=10&from={{from}}&to={{to}}",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ]
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"HTTP 200\",()=>pm.response.to.have.status(200));",
+                  ""
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "H34 Horarios pico",
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/analytics/branches/peak-hours?branchIds={{branchIds}}&from={{from}}&to={{to}}",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ]
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"HTTP 200\",()=>pm.response.to.have.status(200));",
+                  ""
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "H35 Desempeño",
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/analytics/branches/performance?sortBy=totalSales&direction=desc&from={{from}}&to={{to}}",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ]
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"HTTP 200\",()=>pm.response.to.have.status(200));",
+                  ""
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "H24 Desde gerencia general",
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/management/branches/{{branchId}}/ratings/summary",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ]
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"HTTP 200\",()=>pm.response.to.have.status(200));",
+                  ""
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Cerrar sesión",
+          "request": {
+            "method": "POST",
+            "url": "{{baseUrl}}/auth/logout",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ]
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"HTTP 204\",()=>pm.response.to.have.status(204));",
+                  ""
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Sesión cerrada — 401 esperado",
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/auth/me",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ]
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"HTTP 401\",()=>pm.response.to.have.status(401));",
+                  ""
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "10 Lealtad H22 — configuración y checkout",
+      "description": "Flujo manual de H22. Ejecute de arriba hacia abajo. El login guarda la sesión en la cookie HttpOnly bistro_session del cookie jar de Postman; no use Bearer token. Crea un cliente y un beneficio inactivo persistentes.",
+      "item": [
+        {
+          "name": "H22 Preparar cliente de prueba",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\"email\":\"{{h22CustomerEmail}}\",\"password\":\"{{h22CustomerPassword}}\",\"firstName\":\"Cliente\",\"lastName\":\"Postman H22\",\"phone\":\"20255501\"}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": "{{baseUrl}}/auth/register/customer",
+            "description": "Crea un cliente único para probar el catálogo de checkout. Esta cuenta queda en la base local."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Cliente creado (201)\",()=>pm.response.to.have.status(201));",
+                  "pm.test(\"Rol CUSTOMER\",()=>{if(pm.response.code===201)pm.expect(pm.response.json().role).to.eql(\"CUSTOMER\");});",
+                  "if(pm.response.code===201){pm.collectionVariables.set(\"h22CustomerId\",pm.response.json().id);pm.test(\"Email generado coincide con el cliente creado\",()=>pm.expect(pm.response.json().email).to.eql(pm.collectionVariables.get(\"h22CustomerEmail\")));}"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Login MANAGER — lectura",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\"email\":\"{{managerEmail}}\",\"password\":\"{{managerPassword}}\"}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": "{{baseUrl}}/auth/login",
+            "description": "Inicia sesión con credenciales del environment. Postman conserva bistro_session en su cookie jar."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Login 200\",()=>pm.response.to.have.status(200));",
+                  "pm.test(\"MANAGER autenticado\",()=>pm.expect(pm.response.json().role).to.eql(\"MANAGER\"));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "H22 GET reglas — MANAGER permitido",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{baseUrl}}/management/loyalty/rules",
+            "description": "Debe responder con conversionRate, updatedById y updatedAt."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Lectura administrativa 200\",()=>pm.response.to.have.status(200));",
+                  "pm.test(\"Forma de regla\",()=>{const r=pm.response.json();pm.expect(r.conversionRate).to.be.a(\"number\");pm.expect(r.updatedById).to.be.a(\"string\");pm.expect(r.updatedAt).to.be.a(\"string\");});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "H22 PUT reglas — MANAGER denegado",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\"conversionRate\":1.0000}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": "{{baseUrl}}/management/loyalty/rules",
+            "description": "Comprueba que MANAGER puede leer pero no escribir."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Escritura denegada (403)\",()=>pm.response.to.have.status(403));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "H22 GET catálogo administrativo — MANAGER",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{baseUrl}}/management/loyalty/benefits",
+            "description": "Devuelve beneficios activos e inactivos."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Catálogo administrativo 200\",()=>pm.response.to.have.status(200));",
+                  "pm.test(\"Respuesta es una lista\",()=>pm.expect(pm.response.json()).to.be.an(\"array\"));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Login GENERAL_MANAGER — configuración",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\"email\":\"{{generalEmail}}\",\"password\":\"{{generalPassword}}\"}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": "{{baseUrl}}/auth/login",
+            "description": "Reemplaza la cookie de sesión por la sesión de GENERAL_MANAGER."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Login 200\",()=>pm.response.to.have.status(200));",
+                  "pm.test(\"GENERAL_MANAGER autenticado\",()=>pm.expect(pm.response.json().role).to.eql(\"GENERAL_MANAGER\"));",
+                  "pm.collectionVariables.set(\"h22GeneralManagerId\",pm.response.json().userId);"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "H22 GET regla global",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{baseUrl}}/management/loyalty/rules",
+            "description": "Lee el singleton GLOBAL antes de probar su actualización."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Regla global 200\",()=>pm.response.to.have.status(200));",
+                  "pm.test(\"Tasa positiva\",()=>pm.expect(pm.response.json().conversionRate).to.be.above(0));",
+                  "pm.collectionVariables.set(\"h22OriginalRate\",pm.response.json().conversionRate);"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "H22 PUT regla global",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\"conversionRate\":{{h22OriginalRate}}}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": "{{baseUrl}}/management/loyalty/rules",
+            "description": "Actualiza la regla con la tasa actual para verificar upsert sin cambiar el valor de negocio."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Actualización 200\",()=>pm.response.to.have.status(200));",
+                  "pm.test(\"Conserva tasa y registra actor\",()=>{const r=pm.response.json();pm.expect(r.conversionRate).to.eql(Number(pm.collectionVariables.get(\"h22OriginalRate\")));pm.expect(r.updatedById).to.eql(pm.collectionVariables.get(\"h22GeneralManagerId\"));});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "H22 POST crear beneficio activo",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\"name\":\"{{h22BenefitName}}\",\"pointsRequired\":1000,\"discountValue\":5.00,\"isActive\":true}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": "{{baseUrl}}/management/loyalty/benefits",
+            "description": "Crea un beneficio de prueba. El test guarda benefitId para el PATCH posterior; queda persistido en la base local."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Beneficio creado (201)\",()=>pm.response.to.have.status(201));",
+                  "pm.test(\"Campos del beneficio\",()=>{const b=pm.response.json();pm.expect(b.id).to.be.a(\"string\");pm.expect(b.isActive).to.eql(true);pm.expect(b.discountValue).to.eql(5);});",
+                  "pm.collectionVariables.set(\"h22BenefitId\",pm.response.json().id);"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "H22 PATCH desactivar beneficio",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\"isActive\":false}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": "{{baseUrl}}/management/loyalty/benefits/{{h22BenefitId}}",
+            "description": "Desactiva el beneficio creado arriba; los beneficios no se eliminan."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Beneficio desactivado (200)\",()=>pm.response.to.have.status(200));",
+                  "pm.test(\"Queda inactivo\",()=>pm.expect(pm.response.json().isActive).to.eql(false));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Login CUSTOMER — checkout",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\"email\":\"{{h22CustomerEmail}}\",\"password\":\"{{h22CustomerPassword}}\"}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": "{{baseUrl}}/auth/login",
+            "description": "Inicia sesión con el cliente temporal creado al inicio de la carpeta."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Login 200\",()=>pm.response.to.have.status(200));",
+                  "pm.test(\"CUSTOMER autenticado\",()=>pm.expect(pm.response.json().role).to.eql(\"CUSTOMER\"));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "H22 GET beneficios activos — CUSTOMER",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{baseUrl}}/loyalty/benefits",
+            "description": "Lista solo beneficios activos, ordenados por puntos requeridos. No debe incluir el beneficio recién desactivado."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Catálogo de checkout 200\",()=>pm.response.to.have.status(200));",
+                  "pm.test(\"Solo activos y beneficio desactivado excluido\",()=>{const a=pm.response.json();pm.expect(a).to.be.an(\"array\");pm.expect(a.every(b=>b.isActive===true)).to.eql(true);pm.expect(a.some(b=>b.id===pm.collectionVariables.get(\"h22BenefitId\"))).to.eql(false);});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "H22 GET reglas — CUSTOMER denegado",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{baseUrl}}/management/loyalty/rules",
+            "description": "Verifica que el acceso de administración no se concede a CUSTOMER."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Cliente sin acceso administrativo (403)\",()=>pm.response.to.have.status(403));"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

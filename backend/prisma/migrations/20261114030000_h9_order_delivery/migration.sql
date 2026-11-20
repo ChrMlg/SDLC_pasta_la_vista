@@ -1,0 +1,1 @@
+ALTER TABLE "Order" ADD COLUMN "pickedUpAt" TIMESTAMP(3), ADD COLUMN "pickedUpById" UUID, ADD COLUMN "deliveredById" UUID;
