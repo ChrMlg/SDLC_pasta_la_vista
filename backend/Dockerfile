@@ -20,6 +20,6 @@ ENV NODE_ENV=production PORT=3000
 COPY --from=build /app/node_modules /app/node_modules
 COPY --from=build /app/backend/dist dist
 COPY --from=build /app/backend/prisma prisma
-COPY backend/scripts/seed-evaluation.cjs backend/scripts/export-team-access.cjs backend/scripts/local-stack.cjs backend/scripts/project-db-config.cjs scripts/
+COPY backend/scripts/seed-evaluation.cjs backend/scripts/export-team-access.cjs backend/scripts/local-stack.cjs backend/scripts/project-db-config.cjs backend/scripts/validate-production.cjs scripts/
 EXPOSE 3000
 CMD ["sh", "-c", "../node_modules/.bin/prisma migrate deploy --schema prisma/schema.prisma && node prisma/bootstrap.cjs && exec node dist/main.js"]

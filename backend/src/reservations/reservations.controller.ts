@@ -9,7 +9,7 @@ import { ReservationsService } from './reservations.service';
 export class ReservationsController {
   constructor(private readonly reservations: ReservationsService) {}
 
-  @ApiBody({ schema: {"type": "object", "properties": {"branchId": {"type": "string"}, "date": {"type": "string"}, "time": {"type": "string"}, "partySize": {"type": "integer"}}, "example": {"branchId": "a1111111-1111-4111-8111-111111111111", "date": "2090-01-01", "time": "Ejemplo", "partySize": 2}} })
+  @ApiBody({ schema: {"type": "object", "required": ["branchId", "date", "time", "partySize"], "properties": {"branchId": {"type": "string", "format": "uuid"}, "date": {"type": "string", "format": "date", "description": "Fecha futura dentro del rango permitido; consultar disponibilidad"}, "time": {"type": "string", "example": "12:00"}, "partySize": {"type": "integer", "minimum": 1}}, "example": {"branchId": "a1111111-1111-4111-8111-111111111111", "date": new Date(Date.now() + 86400000).toISOString().slice(0, 10), "time": "12:00", "partySize": 2}} })
   @Post('reservations')
   create(@Body() body: unknown, @Req() request: AuthenticatedRequest) {
     return this.reservations.create(body, request.user!);

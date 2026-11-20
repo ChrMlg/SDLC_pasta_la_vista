@@ -12,8 +12,9 @@ async function main(){
   const config=loadProjectConfig('local'),url=new URL(config.DATABASE_URL),baseUrl=config.PROJECT_BASE_URL;
   assert.ok(['localhost','127.0.0.1'].includes(url.hostname),'Solo se verifica el backend local');
   const db=new PrismaClient({datasources:{db:{url:url.toString()}}}),branches=[randomUUID(),randomUUID()],userIds=[],benefitIds=[],roles={},run=randomUUID();
-  let failure;
+  let failure, originalRule;
   try {
+    originalRule=await db.loyaltyRule.findUnique({where:{id:"GLOBAL"}});
     await db.branch.createMany({data:branches.map((id,i)=>({id,code:`VERIFY-${run}-${i}`,name:`Verificación ${run} ${i}`}))});
     await db.table.create({data:{branchId:branches[0],number:1,capacity:4,status:'AVAILABLE'}});
     await seedInventoryItems(db,branches);
@@ -48,6 +49,9 @@ async function main(){
   } catch(error){failure=error;}
   finally {
     try {
+      // H22 modifica una regla global: restaurar exactamente el estado previo al runner.
+      if(originalRule)await db.loyaltyRule.upsert({where:{id:'GLOBAL'},create:originalRule,update:{conversionRate:originalRule.conversionRate,updatedById:originalRule.updatedById,updatedAt:originalRule.updatedAt}});
+      else if(originalRule===null)await db.loyaltyRule.deleteMany({where:{id:'GLOBAL'}});
       // Cada eliminación está limitada a IDs generados por esta ejecución. Nunca se limpia una sucursal del equipo.
       const branchId={in:branches},userId={in:userIds},order={branchId};
       await db.notification.deleteMany({where:{userId}});

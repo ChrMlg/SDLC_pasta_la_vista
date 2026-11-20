@@ -5,6 +5,12 @@ const { id } = require('./project-data.cjs');
 // Se usa el mismo script contra la base configurada en local y en despliegue.
 async function seedEvaluation(db, key, version) {
   const accounts=initialAccounts(key,version);
+  await require('./seed.cjs').seedLoyaltyRule(db);
+  await db.loyaltyBenefit.upsert({
+    where: { id: id('evaluation-loyalty-benefit') },
+    create: { id: id('evaluation-loyalty-benefit'), name: 'Beneficio de evaluación', pointsRequired: 5, discountValue: '1.00', isActive: true },
+    update: {},
+  });
   await provisionInitialAccounts(db,key,version);
   const { hashPassword, verifyPassword }=require('../dist/auth/credentials');
   for(const account of accounts.users){
@@ -32,7 +38,7 @@ async function seedEvaluation(db, key, version) {
   const notifications=new NotificationsService(db),orders=new OrdersService(new PrismaOrdersRepository(db));
   const billing=new BillingService(db,async()=>{},notifications);
   const session={userId:customer.id,role:'CUSTOMER',branchId:null};
-  for (const [index,scenario] of [[0,'entregado'],[0,'pendiente'],[1,'pendiente'],[2,'pendiente']]) {
+  for (const [index,scenario] of [[0,'entregado'],[0,'pendiente'],[1,'pendiente'],[2,'pendiente'],[0,'saldo lealtad'],[0,'checkout lealtad']]) {
     const branch=accounts.branches[index],note='Evaluación inicial: '+scenario;
     let order=await db.order.findFirst({where:{branchId:branch.id,clientId:customer.id,items:{some:{note}}}});
     if(!order){
@@ -43,6 +49,8 @@ async function seedEvaluation(db, key, version) {
     // Si el equipo ya cambió este ejemplo, conservarlo en lugar de restablecerlo.
     if(order.status==='CANCELLED')continue;
     const bill=order.billId?await billing.getBill(order.billId,session):await billing.create(branch.id,{orderId:order.id},session);
+    // Dejar una cuenta abierta para canjear puntos desde Swagger/Postman.
+    if(scenario==='checkout lealtad')continue;
     if(bill.status!=='PAID')await billing.pay(bill.id,id('evaluation-payment-'+bill.id),{cardHolder:'Cliente Evaluación',cardNumber:'4242424242424242',expMonth:12,expYear:new Date().getFullYear()+2,cvv:'123'},session);
     if(index===0&&scenario==='entregado'){
       const cook=accounts.users.find(u=>u.label==='kitchen'),waiter=accounts.users.find(u=>u.label==='waiter');

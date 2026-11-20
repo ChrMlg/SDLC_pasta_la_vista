@@ -29,6 +29,9 @@ test('H23 #54: customer reviews with local PostgreSQL', { timeout: 60000 }, asyn
       await db.kitchenTicketLog.deleteMany({ where: { ticket: { orderId: { in: orderIds } } } });
       await db.kitchenTicket.deleteMany({ where: { orderId: { in: orderIds } } });
       await db.orderItem.deleteMany({ where: { orderId: { in: orderIds } } });
+      // Los pagos H19 también crean lealtad para los clientes de este fixture.
+      await db.loyaltyTransaction.deleteMany({ where: { account: { customerId: { in: userIds } } } });
+      await db.loyaltyAccount.deleteMany({ where: { customerId: { in: userIds } } });
       await db.order.deleteMany({ where: { id: { in: orderIds } } });
       await db.receipt.deleteMany({ where: { branchId: { in: [branch, otherBranch] } } });
       await db.payment.deleteMany({ where: { bill: { branchId: { in: [branch, otherBranch] } } } });

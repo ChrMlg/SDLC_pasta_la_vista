@@ -1,17 +1,17 @@
 # Problemas conocidos y pendientes
 
+Revisión: 19/11/2026 sobre develop 71f8b2c y los ajustes locales de preparación.
+
 | ID | Problema / reproducción | Impacto | Estado |
 |---|---|---|---|
-| DEF-01 | Importar environment antiguo “SDLC QA privado” o usar credenciales de otra instalación | Alto: autenticación/IDs incorrectos | Instrucciones y exportación corregidas localmente; falta confirmación en el equipo de Christian |
-| DEF-02 | Ejecutar npm test en el checkout backend: antes referenciaba archivos frontend ausentes | Alto | Comando corregido; resultado actual en evidencias locales |
-| DEF-04 | Ejecutar Salud con solo baseUrl: el script previo reportaba «Falta branchId» aunque la API respondiera 200 | Alto | Corregido y verificado con Newman sin environment ni credenciales; healthcheck con URL local por defecto. Confirmación en el equipo de Christian pendiente |
-| ENT-01 | No hay release v1.0.0 ni URLs HTTPS configuradas | Alto | DigitalOcean confirmado; servidor, dominio, revisión y publicación pendientes |
-| ENT-02 | Verificar criterios de todas las historias contra suites .spec.ts Jest | Alto | Suites Jest incorporadas para las historias de Marcelo; falta revisión independiente de la matriz y criterios duplicados H1–H3 |
-| ENT-03 | Pruebas manuales por criterio, capturas y aceptación independiente | Alto | Pendiente; no se registran como ejecutadas |
-| ENT-04 | Frontend y módulos de lealtad H19–H22 no aparecen en este backend | Alto | Validar integración con responsables; no declarar terminadas sus historias |
-| ENT-05 | Aprobaciones de PR, cards Hecho, carnets y URL de tablero | Medio | 18 PR aprobados y fusionados verificados; H1–H3, cards, carnets y URL de tablero por confirmar |
-| ENT-06 | Semilla suficiente para todos los módulos y usuario cliente de evaluación | Alto | Semilla local de los módulos implementados verificada; lealtad y ejecución desplegada pendientes |
+| DEF-01 | Importar un environment antiguo o credenciales de otra instalación | Alto: autenticación/IDs incorrectos | Exportación e instrucciones corregidas; usar los accesos de la instalación actual |
+| DEF-02 | Ejecutar H6/H23 después de incorporar H19: la limpieza intenta borrar pedidos referenciados por puntos | Medio: falla el hook de prueba y deja fixtures | Limpieza ajustada para borrar primero lealtad de los clientes exclusivos del fixture |
+| DEF-03 | Newman ejecuta H22 y cambia la regla global de puntos | Medio: altera configuración local después de verificar | Runner ajustado para restaurar la regla original |
+| ENT-01 | No hay release v1.0.0 ni URLs HTTPS verificadas | Alto | Configuración DigitalOcean + Supabase preparada; infraestructura y publicación pendientes |
+| ENT-02 | Suites de Marcelo sin commit; H1–H3 backend integradas por PR general #67 sin reviews | Alto | 18 PR #68–85 con aprobación independiente comprobada; H1–H3 requieren revisión y trazabilidad; cards sin verificar |
+| ENT-03 | Pruebas manuales, capturas y aceptación desplegada | Alto | Pendientes; las pruebas automatizadas no las sustituyen |
+| ENT-04 | Solo hay backend; no existe frontend en este repositorio | Alto | La guía exige interfaz pública; falta cubrir el requisito o confirmar excepción con cátedra |
+| ENT-05 | URLs, datos académicos, tablero y accesos docentes incompletos/no verificados | Medio | Completar README, forma de trabajo y trazabilidad antes de entregar |
+| ENT-06 | Semilla y acceso de producción | Alto | Semilla incluye H19–H22; ejecución y logins en Supabase pendientes |
 
-Los cambios de esta revisión están sin commit y sin push por instrucción de Marcelo. No hay PR correctivo que enlazar todavía. Fecha de revisión: 17/11/2026.
-
-DEF-03: una ejecución paralela de regresiones, simultánea con escrituras de preparación, obtuvo 409 BILL_CONFLICT en H6. Confirmación secuencial: 259 comprobaciones aprobadas. El runner `test:stories` serializa las suites; no se modificó el contrato del servicio de cuentas.
+Los defectos corregidos deben incorporarse a la versión entregada.

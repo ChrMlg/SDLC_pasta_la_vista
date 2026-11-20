@@ -104,7 +104,6 @@ Swagger local: `http://127.0.0.1:3000/api/docs`. URL HTTPS de Swagger: pendiente
 | GET | `/api/branches/:branchId/tables` |
 | POST | `/api/branches/:branchId/tables/:tableId/select` |
 | DELETE | `/api/branches/:branchId/tables/:tableId/select` |
-| GET | `/api/branches/` |
 
 ### reservations — customer-reservations.controller
 
@@ -132,3 +131,43 @@ Swagger local: `http://127.0.0.1:3000/api/docs`. URL HTTPS de Swagger: pendiente
 | GET | `/api/orders/:orderId/review-eligibility` |
 | POST | `/api/orders/:orderId/reviews` |
 
+
+### billing — cierre, pago simulado y comprobantes H16–H18
+
+| Método | Ruta |
+|---|---|
+| GET | `/api/branches/:branchId/tables/:tableId/billing-summary` |
+| POST | `/api/branches/:branchId/bills` |
+| GET | `/api/bills/:billId` |
+| POST | `/api/bills/:billId/payments` (cabecera `Idempotency-Key`) |
+| GET | `/api/branches/:branchId/receipts/:receiptId` |
+| GET | `/api/branches/:branchId/receipts/:receiptId/pdf` |
+| GET | `/api/me/receipts` |
+| GET | `/api/me/receipts/:receiptId` |
+| GET | `/api/me/receipts/:receiptId/pdf` |
+
+### reservations — creación y administración H10–H11
+
+| Método | Ruta |
+|---|---|
+| POST | `/api/reservations` |
+| GET | `/api/branches/:branchId/reservation-availability` |
+| GET | `/api/management/branches/:branchId/occupancy` |
+| PUT | `/api/reservations/:id/cancel` |
+
+### loyalty — H19–H22
+
+| Método | Ruta | Acceso |
+|---|---|---|
+| GET | `/api/me/loyalty/balance` | Cliente propio |
+| GET | `/api/me/loyalty/history?page=1` | Cliente propio |
+| GET | `/api/loyalty/benefits` | Cliente, beneficios activos |
+| POST | `/api/loyalty/redeem` | Cliente; `billId`, `benefitId` |
+| DELETE | `/api/loyalty/redeem/:redemptionId` | Cliente, canje propio pendiente |
+| GET | `/api/management/loyalty/rules` | Gerente y gerente general |
+| PUT | `/api/management/loyalty/rules` | Gerente general |
+| GET | `/api/management/loyalty/benefits` | Gerente y gerente general |
+| POST | `/api/management/loyalty/benefits` | Gerente general |
+| PATCH | `/api/management/loyalty/benefits/:benefitId` | Gerente general |
+
+H19 acumula puntos dentro del pago aprobado; no expone una ruta para acreditar puntos manualmente. Swagger publica los cuerpos de reglas, beneficios y canje. La sesión se obtiene con login desde el mismo Swagger; el navegador gestiona la cookie HttpOnly.

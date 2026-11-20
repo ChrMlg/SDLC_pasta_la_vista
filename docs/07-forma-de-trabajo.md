@@ -1,6 +1,6 @@
 # Forma de trabajo
 
-Organizamos nuestro trabajo por historias del tablero de GitHub. Antes de programar revisamos su ID, sus criterios de aceptación y las dependencias con los módulos del equipo.
+Organizamos el trabajo por historias del tablero de GitHub. Antes de programar revisamos su ID, sus criterios de aceptación y las dependencias con los módulos del equipo.
 
 Usamos una rama `feature/<ID>-<descripcion>` por historia. Los cambios se integran en `develop` después de la revisión de otro integrante. `main` queda para la versión publicada. Para corregir defectos usamos `bugfix/<ID>-<descripcion>`; para publicar, `release/<version>`; y para correcciones urgentes de producción, `hotfix/<descripcion>`.
 
