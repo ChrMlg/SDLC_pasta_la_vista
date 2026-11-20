@@ -22,4 +22,4 @@ COPY --from=build /app/backend/dist dist
 COPY --from=build /app/backend/prisma prisma
 COPY backend/scripts/seed-evaluation.cjs backend/scripts/export-team-access.cjs backend/scripts/local-stack.cjs backend/scripts/project-db-config.cjs backend/scripts/validate-production.cjs backend/scripts/start-production.sh scripts/
 EXPOSE 3000
-CMD ["sh", "-c", "../node_modules/.bin/prisma migrate deploy --schema prisma/schema.prisma && node prisma/bootstrap.cjs && exec node dist/main.js"]
+CMD ["sh", "scripts/start-production.sh"]
