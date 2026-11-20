@@ -1,5 +1,6 @@
 {
   "name": "@bistro/backend",
+  "version": "1.0.0",
   "private": true,
   "scripts": {
     "prestart": "npm run prisma:generate && npm run build",
