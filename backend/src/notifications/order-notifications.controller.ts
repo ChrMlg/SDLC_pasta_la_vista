@@ -1,4 +1,4 @@
-import { ApiQuery } from '@nestjs/swagger';
+import { ApiQuery, ApiTags } from '@nestjs/swagger';
 import { Controller, Get, Param, Query, Req, UseGuards } from '@nestjs/common';
 import { PrismaClient, OrderStatus } from '@prisma/client';
 import { VerifiedSessionGuard, type AuthenticatedRequest } from '../common/session';
@@ -7,6 +7,7 @@ import { NotificationError } from './notifications.service';
 const uuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 
 // H29 conserva su contrato; la ruta compartida H6/H30 pertenece ahora a KitchenController.
+@ApiTags('Notificaciones')
 @Controller('branches/:branchId')
 @UseGuards(VerifiedSessionGuard)
 export class OrderNotificationsController {

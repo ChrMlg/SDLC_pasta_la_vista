@@ -1,3 +1,4 @@
+import { ApiTags } from '@nestjs/swagger';
 import { OrderDeliveryService } from './order-delivery.service';
 import { KitchenReadyService } from '../kitchen/kitchen-ready.service';
 import { Controller, Get, Param, Patch, Req, UseGuards } from '@nestjs/common';
@@ -8,6 +9,7 @@ import { KitchenActionsService } from '../kitchen/kitchen-actions.service';
 
 const uuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 
+@ApiTags('Menú y pedidos')
 @Controller('orders')
 @UseGuards(VerifiedSessionGuard)
 export class OrderTrackingController {

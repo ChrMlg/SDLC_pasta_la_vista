@@ -1,5 +1,5 @@
 import 'reflect-metadata';
-import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
+import { ApiTags, DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
 import { PrismaClient } from '@prisma/client';
 import { PrismaModule } from './prisma/prisma.module';
 import { Controller, Get, Module } from '@nestjs/common';
@@ -19,6 +19,7 @@ import { LoyaltyModule } from './loyalty/loyalty.module';
 import { AuthService } from './auth/auth.service';
 import type { AuthenticatedRequest } from './common/session';
 
+@ApiTags('Salud')
 @Controller('health')
 class HealthController {
   constructor(private readonly db: PrismaClient) {}
@@ -36,7 +37,7 @@ async function bootstrap() {
   const origins = (process.env.CORS_ORIGINS || '').split(',').map(value => value.trim()).filter(Boolean);
   if (origins.length) app.enableCors({ origin: origins, credentials: true });
   const document = SwaggerModule.createDocument(app, new DocumentBuilder()
-    .setTitle('Pasta la Vista — API').setVersion('1.0.0')
+    .setTitle('Bistro — API').setVersion('1.0.1')
     .setDescription('Iniciar sesión en POST /api/auth/login. La sesión usa la cookie HttpOnly bistro_session. Los permisos dependen del rol y la sucursal.')
     .addCookieAuth('bistro_session').build());
   document.security = [{ cookie: [] }];

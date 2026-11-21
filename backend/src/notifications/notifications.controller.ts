@@ -1,8 +1,9 @@
-import { ApiQuery } from '@nestjs/swagger';
+import { ApiQuery, ApiTags } from '@nestjs/swagger';
 import { Controller, Get, Query, Req, UseGuards } from '@nestjs/common';
 import { VerifiedSessionGuard, type AuthenticatedRequest } from '../common/session';
 import { NotificationsService } from './notifications.service';
 
+@ApiTags('Notificaciones')
 @Controller('notifications')
 @UseGuards(VerifiedSessionGuard)
 export class NotificationsController {
