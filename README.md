@@ -20,8 +20,8 @@ Las credenciales de evaluación se entregan en Moodle, nunca en Git.
 
 | Integrante | GitHub | Alcance según issues |
 |---|---|---|
-| Marcelo Enrique Campos Reyes (00148023) | Marceloereyes | Módulos 3 (Cocina), 4 (Reservaciones), 5 (Inventario), 8 (Reseñas) y 10 (Reportes): H6–H15, H23–H25 y H31–H35 (18 historias). No incluye H1–H3. |
-| Christian (00110219) | ChrMlg | Pedidos, pagos y notificaciones; detalle en historias |
+| Marcelo Enrique Campos Reyes (00148023) | Marceloereyes | Módulos 3 (Cocina), 4 (Reservaciones), 5 (Inventario), 8 (Reseñas) y 10 (Reportes): H6–H15, H23–H25 y H31–H35 (18 historias).. |
+| Christian Eduardo Melgar Canizalez (00110219) | ChrMlg | Módulo 1 (H1 - H3) Menú y catálogo, Módulo 2 (H4, H5) Registro de pedidos , Módulo 6 (H16, H18) Pagos y comprobantes, Módulo 7 (H19 - H22) Programa de lealtad; Módulo 9 (H26 - h30), Notificaciones centralizadas; 17 historias  |
 
 ## Inicio local
 
