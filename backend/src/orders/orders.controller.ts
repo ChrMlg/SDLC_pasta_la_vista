@@ -1,8 +1,9 @@
-import { ApiBody } from '@nestjs/swagger';
+import { ApiBody, ApiTags } from '@nestjs/swagger';
 import { Body, Controller, Get, Param, Post, Req, UseGuards } from '@nestjs/common';
 import { VerifiedSessionGuard, type AuthenticatedRequest } from '../common/session';
 import { OrdersService } from './orders.service';
 
+@ApiTags('Menú y pedidos')
 @Controller('orders')
 @UseGuards(VerifiedSessionGuard)
 export class OrdersController {

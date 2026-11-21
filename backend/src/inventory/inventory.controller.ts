@@ -1,8 +1,10 @@
+import { ApiTags } from '@nestjs/swagger';
 import { Controller, Get, Param, Query, Req, UseGuards } from '@nestjs/common';
 import { VerifiedSessionGuard, type AuthenticatedRequest } from '../common/session';
 import { InventoryService } from './inventory.service';
 import { InventoryAlertsService } from './inventory-alerts.service';
 
+@ApiTags('Inventario')
 @Controller('management/branches/:branchId/inventory')
 @UseGuards(VerifiedSessionGuard)
 export class InventoryController {

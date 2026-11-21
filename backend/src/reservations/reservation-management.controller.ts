@@ -1,9 +1,10 @@
-import { ApiQuery } from '@nestjs/swagger';
+import { ApiQuery, ApiTags } from '@nestjs/swagger';
 import { ApiBody } from '@nestjs/swagger';
 import { Body, Controller, Get, Param, Put, Query, Req, UseGuards } from '@nestjs/common';
 import { VerifiedSessionGuard, type AuthenticatedRequest } from '../common/session';
 import { ReservationManagementService } from './reservation-management.service';
 
+@ApiTags('Reservaciones')
 @Controller()
 @UseGuards(VerifiedSessionGuard)
 export class ReservationManagementController {

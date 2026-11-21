@@ -1,4 +1,4 @@
-import { ApiQuery } from '@nestjs/swagger';
+import { ApiQuery, ApiTags } from '@nestjs/swagger';
 import { PerformanceService } from './performance.service';
 import { PeakHoursService } from './peak-hours.service';
 import { TopDishesService } from './top-dishes.service';
@@ -7,6 +7,7 @@ import { VerifiedSessionGuard, type AuthenticatedRequest } from '../common/sessi
 import { requireGeneral, reportFields, reportPeriod, periodResponse, reportBranchIds } from './dto/analytics-query.dto';
 import { SalesMetricsService } from './sales-metrics.service';
 
+@ApiTags('Reportes')
 @Controller('analytics')
 @UseGuards(VerifiedSessionGuard)
 export class AnalyticsController {

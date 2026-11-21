@@ -1,9 +1,10 @@
-import { ApiBody } from '@nestjs/swagger';
+import { ApiBody, ApiTags } from '@nestjs/swagger';
 import { Body, Controller, Get, Param, Post, Query, Req, UseGuards } from '@nestjs/common';
 import { VerifiedSessionGuard, type AuthenticatedRequest } from '../common/session';
 import { inputFields } from '../common/business-error';
 import { ReviewsService } from './reviews.service';
 
+@ApiTags('Reseñas')
 @Controller('orders/:orderId')
 @UseGuards(VerifiedSessionGuard)
 export class ReviewsController {
