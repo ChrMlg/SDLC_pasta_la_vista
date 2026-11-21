@@ -1,10 +1,11 @@
-import { ApiBody, ApiHeader } from '@nestjs/swagger';
+import { ApiBody, ApiHeader, ApiTags } from '@nestjs/swagger';
 import { Body, Controller, Get, Headers, HttpCode, Param, Post, Query, Req, Res, UseGuards } from '@nestjs/common';
 import type { Response } from 'express';
 import { VerifiedSessionGuard, type AuthenticatedRequest } from '../common/session';
 import { BillingService } from './billing.service';
 import { receiptPdf } from './receipt-pdf';
 
+@ApiTags('Facturación y pagos')
 @Controller()
 @UseGuards(VerifiedSessionGuard)
 export class BillingController {

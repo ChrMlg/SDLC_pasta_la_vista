@@ -1,3 +1,4 @@
+import { ApiTags } from '@nestjs/swagger';
 import { Controller, Delete, Get, Param, Post, Req, UseGuards } from '@nestjs/common';
 import { Prisma, PrismaClient } from '@prisma/client';
 import { VerifiedSessionGuard, type AuthenticatedRequest } from '../common/session';
@@ -6,6 +7,7 @@ import { OrderError } from './orders.service';
 const uuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 const invalid = () => new OrderError(400, 'INVALID_ID', 'Identificador inválido');
 
+@ApiTags('Menú y pedidos')
 @Controller('branches')
 @UseGuards(VerifiedSessionGuard)
 export class SeatingController {
@@ -105,6 +107,7 @@ export class SeatingController {
   }
 }
 
+@ApiTags('Menú y pedidos')
 @Controller('me/table-selection')
 @UseGuards(VerifiedSessionGuard)
 export class MySeatingController {

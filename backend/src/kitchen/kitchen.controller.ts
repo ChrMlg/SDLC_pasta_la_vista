@@ -1,4 +1,4 @@
-import { ApiQuery } from '@nestjs/swagger';
+import { ApiQuery, ApiTags } from '@nestjs/swagger';
 import { ApiBody } from '@nestjs/swagger';
 import { Body, Controller, Get, Param, Patch, Query, Req, UseGuards } from '@nestjs/common';
 import { VerifiedSessionGuard, type AuthenticatedRequest } from '../common/session';
@@ -6,6 +6,7 @@ import { KitchenReadyService } from './kitchen-ready.service';
 import { KitchenService } from './kitchen.service';
 import { KitchenActionsService } from './kitchen-actions.service';
 
+@ApiTags('Cocina')
 @Controller('branches/:branchId/kitchen/orders')
 @UseGuards(VerifiedSessionGuard)
 export class KitchenController {

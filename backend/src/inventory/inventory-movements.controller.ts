@@ -1,7 +1,9 @@
+import { ApiTags } from '@nestjs/swagger';
 import { Body, Controller, Post, Req, UseGuards } from '@nestjs/common';
 import { VerifiedSessionGuard, type AuthenticatedRequest } from '../common/session';
 import { InventoryMovementsService } from './inventory-movements.service';
 
+@ApiTags('Inventario')
 @Controller('management/inventory/movements')
 @UseGuards(VerifiedSessionGuard)
 export class InventoryMovementsController {

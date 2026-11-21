@@ -1,7 +1,9 @@
+import { ApiTags } from '@nestjs/swagger';
 import { Controller, Get, Param, Query, Req, UseGuards } from '@nestjs/common';
 import { VerifiedSessionGuard, type AuthenticatedRequest } from '../common/session';
 import { RatingsSummaryService } from './ratings-summary.service';
 
+@ApiTags('Reseñas')
 @Controller('management/branches/:branchId/ratings')
 @UseGuards(VerifiedSessionGuard)
 export class RatingsSummaryController {

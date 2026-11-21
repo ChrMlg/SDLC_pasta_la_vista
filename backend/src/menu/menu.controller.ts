@@ -1,10 +1,11 @@
-import { ApiQuery } from '@nestjs/swagger';
+import { ApiQuery, ApiTags } from '@nestjs/swagger';
 import { ApiBody } from '@nestjs/swagger';
 import { Body, Controller, Get, Param, Patch, Post, Query, Req, UseGuards } from '@nestjs/common';
 import type { AuthenticatedRequest } from '../common/session';
 import { VerifiedSessionGuard } from '../common/session';
 import { MenuService } from './menu.service';
 
+@ApiTags('Menú y pedidos')
 @Controller('branches/:branchId')
 @UseGuards(VerifiedSessionGuard)
 export class MenuController {
