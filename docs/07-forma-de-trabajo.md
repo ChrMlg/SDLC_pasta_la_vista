@@ -1,22 +1,45 @@
 # Forma de trabajo
 
-Organizamos el trabajo por historias del tablero de GitHub. Antes de programar revisamos su ID, sus criterios de aceptación y las dependencias con los módulos del equipo.
+El backend de Bistro se organizó en historias de usuario registradas en [GitHub Issues](https://github.com/ChrMlg/SDLC_pasta_la_vista/issues). Para cada historia se revisaron sus criterios de aceptación y su relación con los demás módulos antes de comenzar el desarrollo.
 
-Usamos una rama `feature/<ID>-<descripcion>` por historia. Los cambios se integran en `develop` después de la revisión de otro integrante. `main` queda para la versión publicada. Para corregir defectos usamos `bugfix/<ID>-<descripcion>`; para publicar, `release/<version>`; y para correcciones urgentes de producción, `hotfix/<descripcion>`.
+## Ramas de trabajo
 
-En los commits incluimos el ID y explicamos el cambio, por ejemplo `feat(H14): registrar movimientos de inventario`. Usamos `feat` para funcionalidades, `fix` para correcciones, `test` para pruebas y `docs` para documentación. Cuando hace falta, explicamos el motivo en el cuerpo del commit.
+- `feature/<ID>-<descripcion>`: desarrollo de historias de usuario.
+- `bugfix/<ID>-<descripcion>`: corrección de defectos.
+- `release/<version>`: preparación de una publicación.
+- `hotfix/<descripcion>`: correcciones sobre una versión publicada, partiendo de `main`.
 
-El PR lleva el ID, un resumen de lo que hicimos, las pruebas ejecutadas y el enlace a la historia. Otro integrante lo revisa y aprueba antes de fusionarlo. Después agregamos el enlace del PR a la card y actualizamos su estado. Las pruebas nuevas también pasan por este flujo, desde la rama de la historia o una rama `feature/<ID>-pruebas`.
+`develop` se utiliza para integrar el trabajo del equipo. `main` contiene el código aprobado para publicación. Los hotfixes se integran en ambas ramas para mantenerlas sincronizadas.
 
-## Publicación de la versión 1.0.0
+## Commits y Pull Requests
 
-1. Comprobar que el PR de `bugfix/H1-H35-preparacion-railway` hacia `develop` fue aprobado por otra persona, se fusionó y las acciones automáticas terminaron sin fallos.
-2. Desde `develop` actualizado crear `release/1.0.0`. En esa rama realizar solamente los ajustes finales de versión y documentación.
-3. Crear PR `release/1.0.0` → `main`, obtener revisión y aprobación de otro integrante y fusionarlo.
-4. Incorporar también el contenido de `release/1.0.0` en `develop`, comprobando que ambas ramas tienen los cambios publicados.
-5. Crear en GitHub la release **v1.0.0** apuntando al commit publicado de `main`, con una lista breve de módulos e historias incluidas. No crear la etiqueta antes de fusionar a `main`.
-6. Configurar Railway para desplegar `main`, comprobar el SHA del despliegue, `/api/health`, Swagger y los accesos de evaluación. Un cambio posterior en producción debe seguir `hotfix/<descripcion>` y pasar a `main` y `develop`, publicando `v1.0.1`.
+Los commits describen el cambio realizado y, cuando corresponde, incluyen el identificador de la historia. Por ejemplo:
 
-Para la nota individual de Marcelo (00148023), documentar los PR aprobados de los **módulos 3, 4, 5, 8 y 10**: H6–H15, H23–H25 y H31–H35, detallados en [historias](08-historias.md). Confirmar sus tarjetas en **Hecho**. **H1–H3 quedan excluidas de su evaluación individual.**
+```text
+feat(H14): registrar movimientos de inventario
+```
 
-Las historias están en [GitHub Issues](https://github.com/ChrMlg/SDLC_pasta_la_vista/issues). El equipo debe añadir el enlace directo al tablero compartido; no asumir que un issue cerrado significa que la tarjeta ya está en **Hecho**.
+Usamos los prefijos `feat`, `fix`, `test` y `docs` según el tipo de cambio.
+
+Cada Pull Request incluye una descripción del trabajo, las pruebas realizadas y la historia relacionada. El otro integrante revisa los cambios antes de aprobar la integración. Después se actualiza la tarjeta correspondiente en GitHub Projects.
+
+## Verificación
+
+El proyecto dispone de comandos para comprobar el funcionamiento del backend:
+
+```bash
+npm test
+npm run typecheck
+npm run build
+```
+
+Las pruebas de los endpoints y sus flujos también se realizan mediante Postman. La guía de [instalación local](05-instalacion-local.md) explica la preparación del entorno y la ejecución de las colecciones.
+
+## Distribución del backend
+
+| Integrante | GitHub | Módulos | Historias |
+|---|---|---|---|
+| **Marcelo Enrique Campos Reyes (00148023)** | [Marceloereyes](https://github.com/Marceloereyes) | 3: Cocina (H6–H9); 4: Reservaciones (H10–H12); 5: Inventario (H13–H15); 8: Reseñas (H23–H25); 10: Reportes (H31–H35). | **18** |
+| **Christian Eduardo Melgar Canizalez (00110219)** | [ChrMlg](https://github.com/ChrMlg) | 1: Menú (H1–H3); 2: Pedidos (H4–H5); 6: Pagos (H16–H18); 7: Lealtad (H19–H22); 9: Notificaciones (H26–H30). | **17** |
+
+El detalle de las **35 historias de usuario** se encuentra en [Historias de usuario](08-historias.md).

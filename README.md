@@ -1,40 +1,53 @@
 # Bistro
 
-Backend del sistema de restaurantes con sucursales: catálogo, pedidos, cocina, reservaciones, inventario, pagos, lealtad, reseñas, notificaciones y reportes.
+**Bistro** es el backend de un sistema de gestión para restaurantes con varias sucursales. Permite administrar el menú, los pedidos, la cocina, las reservaciones, el inventario, los pagos, el programa de lealtad, las reseñas, las notificaciones y los reportes.
 
-**Curso:** Ingeniería de Software, UCA, ciclo 02/2026. Sección y número oficial de proyecto: pendientes de confirmación del equipo.
+**Proyecto académico:** Ingeniería de Software — Universidad Centroamericana José Simeón Cañas (UCA), ciclo 02/2026.
 
-## Backend desplegado
+## Tecnologías
 
-**API (Railway):** https://practical-transformation-staging.up.railway.app/api
-**Healthcheck:** https://practical-transformation-staging.up.railway.app/api/health
-**Swagger:** https://practical-transformation-staging.up.railway.app/api/docs
+El backend está desarrollado con Node.js, NestJS y Prisma. Utiliza PostgreSQL en Supabase y está desplegado en Railway.
 
-El equipo informó el 20/11/2026 que el backend está desplegado, conectado a PostgreSQL en Supabase, y que sus rutas responden en Postman. Este documento no acredita por sí mismo cada criterio de aceptación ni el commit exacto publicado en Railway: deben cotejarse con el deployment y los resultados de prueba. La interfaz frontend se gestiona fuera del alcance de este repositorio.
+## API
 
-Para la entrega final, integrar los cambios de esta rama a `develop` mediante PR aprobado, publicar `release/1.0.0` en `main` mediante otro PR aprobado y crear la etiqueta `v1.0.0` sobre el commit publicado. **Railway debe desplegar ese mismo commit de `main`.** Véase [forma de trabajo](docs/07-forma-de-trabajo.md) y [despliegue](docs/06-despliegue.md).
+- **API:** https://practical-transformation-staging.up.railway.app/api
+- **Estado del servicio:** https://practical-transformation-staging.up.railway.app/api/health
+- **Documentación Swagger:** https://practical-transformation-staging.up.railway.app/api/docs
 
-Las credenciales de evaluación se entregan en Moodle, nunca en Git.
+## Equipo de backend
 
-## Integrantes
+El desarrollo se distribuyó entre dos integrantes, con un total de **10 módulos y 35 historias de usuario**.
 
-| Integrante | GitHub | Alcance según issues |
-|---|---|---|
-| Marcelo Enrique Campos Reyes (00148023) | Marceloereyes | Módulos 3 (Cocina), 4 (Reservaciones), 5 (Inventario), 8 (Reseñas) y 10 (Reportes): H6–H15, H23–H25 y H31–H35 (18 historias).. |
-| Christian Eduardo Melgar Canizalez (00110219) | ChrMlg | Módulo 1 (H1 - H3) Menú y catálogo, Módulo 2 (H4, H5) Registro de pedidos , Módulo 6 (H16, H18) Pagos y comprobantes, Módulo 7 (H19 - H22) Programa de lealtad; Módulo 9 (H26 - h30), Notificaciones centralizadas; 17 historias  |
+| Integrante | GitHub | Módulos desarrollados | Total |
+|---|---|---|---|
+| **Marcelo Enrique Campos Reyes (00148023)** | [Marceloereyes](https://github.com/Marceloereyes) | Módulo 3 (H6–H9), cocina y entrega de pedidos; módulo 4 (H10–H12), reservaciones; módulo 5 (H13–H15), inventario; módulo 8 (H23–H25), reseñas y calificaciones; módulo 10 (H31–H35), reportes y estadísticas. | **18 historias** |
+| **Christian Eduardo Melgar Canizalez (00110219)** | [ChrMlg](https://github.com/ChrMlg) | Módulo 1 (H1–H3), menú y catálogo; módulo 2 (H4–H5), registro de pedidos; módulo 6 (H16–H18), pagos y comprobantes; módulo 7 (H19–H22), programa de lealtad; módulo 9 (H26–H30), notificaciones centralizadas. | **17 historias** |
 
-## Inicio local
+Las historias y sus enlaces de seguimiento están detallados en [Historias de usuario](docs/08-historias.md).
 
-Con Node.js 22 y Docker Compose activos: `npm ci` y `npm start` desde la raíz. API: `http://127.0.0.1:3000/api`; Swagger: `/api/docs`. Accesos privados: `ACCESOS_LOCALES.md`. Procedimiento completo en instalación local.
+## Ejecución local
+
+Se requiere Node.js 22 o superior y Docker con Compose.
+
+Desde la raíz del repositorio:
+
+```bash
+npm ci
+npm start
+```
+
+La API local estará disponible en `http://127.0.0.1:3000/api` y Swagger en `http://127.0.0.1:3000/api/docs`.
+
+La configuración y los demás comandos se explican en la [guía de instalación local](docs/05-instalacion-local.md).
 
 ## Documentación
 
-1. [Guia de uso](docs/01-guia-de-uso.md)
-2. [Arquitectura](docs/02-arquitectura.md)
-3. [Modelo de datos](docs/03-modelo-de-datos.md)
-4. [Api](docs/04-api.md)
-5. [Instalacion local](docs/05-instalacion-local.md)
-6. [Despliegue](docs/06-despliegue.md)
-7. [Forma de trabajo](docs/07-forma-de-trabajo.md)
-8. [Historias](docs/08-historias.md)
-9. [Problemas conocidos](docs/09-problemas-conocidos.md)
+- [Guía de uso](docs/01-guia-de-uso.md)
+- [Arquitectura](docs/02-arquitectura.md)
+- [Modelo de datos](docs/03-modelo-de-datos.md)
+- [API](docs/04-api.md)
+- [Instalación local](docs/05-instalacion-local.md)
+- [Despliegue](docs/06-despliegue.md)
+- [Forma de trabajo](docs/07-forma-de-trabajo.md)
+- [Historias de usuario](docs/08-historias.md)
+- [Problemas conocidos](docs/09-problemas-conocidos.md)
